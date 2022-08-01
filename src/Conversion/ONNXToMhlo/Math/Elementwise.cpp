@@ -46,11 +46,6 @@ struct MhloDialectOp<ONNXCosOp> {
 };
 
 template <>
-struct MhloDialectOp<ONNXSubOp> {
-  using Op = mhlo::SubtractOp;
-};
-
-template <>
 struct MhloDialectOp<ONNXDivOp> {
   using Op = mhlo::DivOp;
 };
@@ -61,8 +56,23 @@ struct MhloDialectOp<ONNXExpOp> {
 };
 
 template <>
+struct MhloDialectOp<ONNXMulOp> {
+  using Op = mhlo::MulOp;
+};
+
+template <>
 struct MhloDialectOp<ONNXSigmoidOp> {
   using Op = mhlo::LogisticOp;
+};
+
+template <>
+struct MhloDialectOp<ONNXSqrtOp> {
+  using Op = mhlo::SqrtOp;
+};
+
+template <>
+struct MhloDialectOp<ONNXSubOp> {
+  using Op = mhlo::SubtractOp;
 };
 
 namespace {
@@ -169,7 +179,7 @@ struct ONNXElementwiseUnaryOpLoweringToMhlo<ONNXReluOp>
       return failure();
     Type resultType = *op->result_type_begin();
     Value broadcastedZero =
-        getShapedZero(loc, rewriter, inpType, inp, resultType);
+        getShapedZero(loc, rewriter, inp);
     Value resultOp =
         rewriter.create<mhlo::MaxOp>(loc, resultType, inp, broadcastedZero);
     rewriter.replaceOp(op, resultOp);
@@ -260,21 +270,24 @@ struct ONNXElementwiseVariadicOpLoweringToMhlo : public ConversionPattern {
 void populateLoweringONNXElementwiseOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {
   patterns.insert<ONNXElementwiseUnaryOpLoweringToMhlo<ONNXAbsOp>,
-      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXAddOp>,
-      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXAndOp>,
       ONNXElementwiseUnaryOpLoweringToMhlo<ONNXCastOp>,
       ONNXElementwiseUnaryOpLoweringToMhlo<ONNXCeilOp>,
       ONNXElementwiseUnaryOpLoweringToMhlo<ONNXCosOp>,
-      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXDivOp>,
+      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXExpOp>,
+      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXSigmoidOp>,
+      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXSqrtOp>,
+      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXReluOp>,
       ONNXElementwiseBinaryOpLoweringToMhlo<ONNXEqualOp>,
       ONNXElementwiseBinaryOpLoweringToMhlo<ONNXGreaterOp>,
       ONNXElementwiseBinaryOpLoweringToMhlo<ONNXGreaterOrEqualOp>,
       ONNXElementwiseBinaryOpLoweringToMhlo<ONNXLessOp>,
       ONNXElementwiseBinaryOpLoweringToMhlo<ONNXLessOrEqualOp>,
-      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXSubOp>,
-      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXExpOp>,
-      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXSigmoidOp>,
-      ONNXElementwiseUnaryOpLoweringToMhlo<ONNXReluOp>>(ctx);
+      ONNXElementwiseBinaryOpLoweringToMhlo<ONNXPowOp>,
+      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXAddOp>,
+      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXAndOp>,
+      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXDivOp>,
+      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXMulOp>,
+      ONNXElementwiseVariadicOpLoweringToMhlo<ONNXSubOp>>(ctx);
 }
 
 } // namespace onnx_mlir

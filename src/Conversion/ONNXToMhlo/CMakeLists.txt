@@ -14,12 +14,16 @@ add_onnx_mlir_library(OMONNXToMhlo
 
   Math/Elementwise.cpp
   Math/Gemm.cpp
+  Math/MatMul.cpp
   Math/Reduction.cpp
   NN/Normalization.cpp
   NN/Pooling.cpp
   Tensor/Concat.cpp
   Tensor/Constant.cpp
+  Tensor/Gather.cpp
   Tensor/Reshape.cpp
+  Tensor/Shape.cpp
+  Tensor/Transpose.cpp
 
   LINK_LIBS PUBLIC
   Accelerator

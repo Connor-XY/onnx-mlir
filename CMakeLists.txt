@@ -9,6 +9,7 @@ option(ONNX_MLIR_BUILD_TESTS "Build ONNX-MLIR test executables. If OFF, just gen
 option(ONNX_MLIR_CCACHE_BUILD "Set to ON for a ccache enabled build." OFF)
 option(ONNX_MLIR_ENABLE_WERROR "Enable warnings as errors." OFF)
 option(ONNX_MLIR_SUPPRESS_THIRD_PARTY_WARNINGS "Suppress warning in third_party code." ON)
+option(ONNX_MLIR_ENABLE_MHLO "Enable MHLO support." ON)
 
 # On systems that still have legacy lib64 directories (e.g., rhel/fedora,
 # etc.), by default some components (e.g., cmake) install into lib while
@@ -184,7 +185,9 @@ set(BENCHMARK_ENABLE_TESTING OFF)
 add_subdirectory(third_party/onnx)
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/rapidcheck)
-add_subdirectory(third_party/mlir-hlo EXCLUDE_FROM_ALL)
+if (ONNX_MLIR_ENABLE_MHLO)
+  add_subdirectory(third_party/mlir-hlo EXCLUDE_FROM_ALL)
+endif()
 if (NOT TARGET benchmark)
   add_subdirectory(third_party/benchmark)
 endif()
