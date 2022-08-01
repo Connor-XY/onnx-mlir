@@ -178,8 +178,7 @@ struct ONNXElementwiseUnaryOpLoweringToMhlo<ONNXReluOp>
     if (inpType == nullptr)
       return failure();
     Type resultType = *op->result_type_begin();
-    Value broadcastedZero =
-        getShapedZero(loc, rewriter, inp);
+    Value broadcastedZero = getShapedZero(loc, rewriter, inp);
     Value resultOp =
         rewriter.create<mhlo::MaxOp>(loc, resultType, inp, broadcastedZero);
     rewriter.replaceOp(op, resultOp);
@@ -233,6 +232,34 @@ struct ONNXElementwiseBinaryOpLoweringToMhlo : public ConversionPattern {
     Value mhloOp;
     createCompareOp<ElementwiseBinaryOp>(
         mhloOp, rewriter, loc, broadcastedLHS, broadcastedRHS);
+    rewriter.replaceOp(op, mhloOp);
+    return success();
+  }
+};
+
+template <>
+struct ONNXElementwiseBinaryOpLoweringToMhlo<ONNXPowOp>
+    : public ConversionPattern {
+  ONNXElementwiseBinaryOpLoweringToMhlo(MLIRContext *ctx)
+      : ConversionPattern(ONNXPowOp::getOperationName(), 1, ctx) {}
+  LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+      ConversionPatternRewriter &rewriter) const final {
+    Location loc = NameLoc::get(
+        StringAttr::get(op->getContext(), ONNXPowOp::getOperationName()),
+        op->getLoc());
+
+    ONNXGenericOpBroadcastedShapeHelper shapeHelper(op);
+    DimsExpr empty;
+    LogicalResult shapecomputed = shapeHelper.computeShape(operands, empty);
+    assert(succeeded(shapecomputed) && "Could not compute output shape");
+
+    int64_t outputRank = shapeHelper.outputRank;
+    llvm::SmallVector<Value, 4> broadcastedOperands =
+        getBroadcastedOperands(op, rewriter, loc, outputRank);
+    Value broadcastedLHS = broadcastedOperands[0];
+    Value broadcastedRHS = broadcastedOperands[1];
+    Value mhloOp = rewriter.create<mhlo::PowOp>(
+        loc, *op->result_type_begin(), broadcastedLHS, broadcastedRHS);
     rewriter.replaceOp(op, mhloOp);
     return success();
   }
