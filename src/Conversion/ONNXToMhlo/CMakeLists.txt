@@ -23,6 +23,7 @@ add_onnx_mlir_library(OMONNXToMhlo
   Tensor/Gather.cpp
   Tensor/Reshape.cpp
   Tensor/Shape.cpp
+  Tensor/Slice.cpp
   Tensor/Transpose.cpp
 
   LINK_LIBS PUBLIC
