@@ -17,8 +17,9 @@
 
 namespace onnx_mlir {
 
-Value getShapedZero(Location loc, ConversionPatternRewriter &rewriter,
-    const ShapedType &inpType, Value &inp, const Type &resultType) {
+Value getShapedZero(
+    Location loc, ConversionPatternRewriter &rewriter, Value &inp) {
+  ShapedType inpType = inp.getType().cast<ShapedType>();
   Value broadcastedZero;
   if (inpType.hasStaticShape())
     broadcastedZero =
@@ -29,7 +30,7 @@ Value getShapedZero(Location loc, ConversionPatternRewriter &rewriter,
         rewriter.create<mhlo::ConstantOp>(loc, rewriter.getZeroAttr(elemType));
     Value shape = rewriter.create<shape::ShapeOfOp>(loc, inp);
     broadcastedZero = rewriter.create<mhlo::DynamicBroadcastInDimOp>(
-        loc, resultType, zero, shape, rewriter.getI64TensorAttr({}));
+        loc, inpType, zero, shape, rewriter.getI64TensorAttr({}));
   }
   return broadcastedZero;
 }
