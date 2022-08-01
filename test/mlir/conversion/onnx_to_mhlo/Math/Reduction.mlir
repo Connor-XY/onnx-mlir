@@ -1,4 +1,4 @@
-// RUN: onnx-mlir-opt --convert-onnx-to-mhlo %s -split-input-file | FileCheck %s
+// RUN: onnx-mlir-opt --decompose-onnx="target=mhlo" --shape-inference --convert-onnx-to-mhlo %s --canonicalize -split-input-file | FileCheck %s
 
 func.func @test_reducemax(%arg0 : tensor<3x2x2xf32>) -> tensor<3x2xf32> {
   %0 ="onnx.ReduceMax"(%arg0) {axes=[1], keepdims = 0 : si64} : (tensor<3x2x2xf32>)-> tensor<3x2xf32>
@@ -25,9 +25,8 @@ func.func @test_reducesum(%arg0 : tensor<3x2x2xf32>) -> tensor<3x2xf32> {
   %0 ="onnx.ReduceSum"(%arg0, %cst) {keepdims = 0 : si64, noop_with_empty_axes = 0 : si64} : (tensor<3x2x2xf32>, tensor<1xi64>)-> tensor<3x2xf32>
   "func.return"(%0) : (tensor<3x2xf32>) -> ()
 // CHECK-LABEL:  func @test_reducesum
-// CHECK-DAG:    [[VAR_0_:%.+]] = mhlo.constant dense<1> : tensor<1xi64>
-// CHECK-DAG:    [[VAR_1_:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
-// CHECK: %2 = mhlo.reduce(%arg0 init: [[VAR_1_]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
+// CHECK:    [[VAR_1_:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
+// CHECK:   %1 = mhlo.reduce(%arg0 init: [[VAR_1_]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
 }
 
 // -----
@@ -45,10 +44,9 @@ func.func @test_reducesum1(%arg0: tensor<3x2x2xf32>, %arg1: tensor<?xi64>) -> te
     %0 = "onnx.ReduceSum"(%arg0, %arg1) {keepdims = 1 : si64, noop_with_empty_axes = 1 : si64} : (tensor<3x2x2xf32>, tensor<?xi64>) -> tensor<3x1x2xf32>
     return %0 : tensor<3x1x2xf32>
 // CHECK-LABEL:  func @test_reducesum1
-// CHECK-DAG:     [[VAR_0:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
-// CHECK-DAG:     [[VAR_1:%.+]] = mhlo.reduce([[PARAM_0:%.+]] init: [[VAR_0]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
-// CHECK-DAG:     [[VAR_2:%.+]] = mhlo.constant dense<[3, 1, 2]> : tensor<3xi64>
-// CHECK-DAG:     [[VAR_3:%.+]] = "mhlo.dynamic_reshape"([[VAR_1]], [[VAR_2]]) : (tensor<3x2xf32>, tensor<3xi64>) -> tensor<3x1x2xf32>
+// CHECK:     [[VAR_0:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
+// CHECK:     [[VAR_1:%.+]] = mhlo.reduce([[PARAM_0:%.+]] init: [[VAR_0]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
+// CHECK:     [[VAR_2:%.+]] = "mhlo.reshape"([[VAR_1]]) : (tensor<3x2xf32>) -> tensor<3x1x2xf32>
 }
 
 // -----
@@ -57,10 +55,9 @@ func.func @test_reducesum2(%arg0: tensor<3x2x2xf32>, %arg1: tensor<?xi64>) -> te
     %0 = "onnx.ReduceSum"(%arg0, %arg1) {keepdims = 1 : si64, noop_with_empty_axes = 0 : si64} : (tensor<3x2x2xf32>, tensor<?xi64>) -> tensor<3x1x2xf32>
     return %0 : tensor<3x1x2xf32>
 // CHECK-LABEL:  func @test_reducesum2
-// CHECK-DAG:     [[VAR_0:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
-// CHECK-DAG:     [[VAR_1:%.+]] = mhlo.reduce([[PARAM_0:%.+]] init: [[VAR_0]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
-// CHECK-DAG:     [[VAR_2:%.+]] = mhlo.constant dense<[3, 1, 2]> : tensor<3xi64>
-// CHECK-DAG:     [[VAR_3:%.+]] = "mhlo.dynamic_reshape"([[VAR_1]], [[VAR_2]]) : (tensor<3x2xf32>, tensor<3xi64>) -> tensor<3x1x2xf32>
+// CHECK:     [[VAR_0:%.+]] = mhlo.constant dense<0.000000e+00> : tensor<f32>
+// CHECK:     [[VAR_1:%.+]] = mhlo.reduce([[PARAM_0:%.+]] init: [[VAR_0]]) applies mhlo.add across dimensions = [1] : (tensor<3x2x2xf32>, tensor<f32>) -> tensor<3x2xf32>
+// CHECK:     [[VAR_2:%.+]] = "mhlo.reshape"([[VAR_1]]) : (tensor<3x2xf32>) -> tensor<3x1x2xf32>
 }
 
 func.func @test_reducemean(%arg0 : tensor<3x2x2xf32>) -> tensor<3x2xf32> {
@@ -86,4 +83,19 @@ func.func @test_reducemean2(%arg0 : tensor<?x?x?xf32>) -> tensor<?x?xf32> {
 // CHECK-NEXT:   [[VAR_4_:%.+]] = "mhlo.dynamic_broadcast_in_dim"([[VAR_0_]], [[VAR_3_]]) {broadcast_dimensions = dense<> : tensor<0xi64>} : (tensor<f32>, tensor<3xindex>) -> tensor<?x?x?xf32>
 // CHECK-NEXT:   [[VAR_5_:%.+]] = mhlo.reduce([[VAR_4_]] init: [[VAR_1_]]) applies mhlo.add across dimensions = [1] : (tensor<?x?x?xf32>, tensor<f32>) -> tensor<?x?xf32>
 // CHECK-NEXT:   [[VAR_6_:%.+]] = mhlo.divide [[VAR_2_]], [[VAR_5_]] : tensor<?x?xf32>
+}
+
+func.func @test_reducel2(%arg0 : tensor<?x?x?xf32>) -> tensor<*xf32> {
+  %0 ="onnx.ReduceL2"(%arg0) {axes=[1], keepdims = 0 : si64} : (tensor<?x?x?xf32>)-> tensor<*xf32>
+  "func.return"(%0) : (tensor<*xf32>) -> ()
+// CHECK-LABEL:  func @test_reducel2
+// CHECK:  %0 = mhlo.constant dense<0.000000e+00> : tensor<f32>
+// CHECK:  %1 = shape.shape_of %arg0 : tensor<?x?x?xf32> -> tensor<3xindex>
+// CHECK:  %2 = shape.shape_of %arg0 : tensor<?x?x?xf32> -> tensor<3xindex>
+// CHECK:  %3 = shape.broadcast %1, %2 : tensor<3xindex>, tensor<3xindex> -> tensor<3xindex>
+// CHECK:  %4 = "mhlo.dynamic_broadcast_in_dim"(%arg0, %3) {broadcast_dimensions = dense<[0, 1, 2]> : tensor<3xi64>} : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<?x?x?xf32>
+// CHECK:  %5 = "mhlo.dynamic_broadcast_in_dim"(%arg0, %3) {broadcast_dimensions = dense<[0, 1, 2]> : tensor<3xi64>} : (tensor<?x?x?xf32>, tensor<3xindex>) -> tensor<?x?x?xf32>
+// CHECK:  %6 = mhlo.multiply %4, %5 : tensor<?x?x?xf32>
+// CHECK:  %7 = mhlo.reduce(%6 init: %0) applies mhlo.add across dimensions = [1] : (tensor<?x?x?xf32>, tensor<f32>) -> tensor<?x?xf32>
+// CHECK:  %8 = mhlo.sqrt %7 : tensor<?x?xf32>
 }
