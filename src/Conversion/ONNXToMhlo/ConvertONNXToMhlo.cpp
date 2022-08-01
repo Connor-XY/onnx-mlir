@@ -35,6 +35,7 @@ void populateONNXToMhloConversionPattern(
   populateLoweringONNXGatherOpToMhloPattern(patterns, ctx);
   populateLoweringONNXReshapeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXShapeOpToMhloPattern(patterns, ctx);
+  populateLoweringONNXSliceOpToMhloPattern(patterns, ctx);
   populateLoweringONNXTransposeOpToMhloPattern(patterns, ctx);
 }
 
