@@ -69,8 +69,8 @@ void FrontendToMhloLoweringPass::runOnOperation() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering.
-  target.addLegalDialect<mhlo::MhloDialect, func::FuncDialect, arith::ArithmeticDialect,
-      shape::ShapeDialect>();
+  target.addLegalDialect<mhlo::MhloDialect, func::FuncDialect,
+      arith::ArithmeticDialect, shape::ShapeDialect, tensor::TensorDialect>();
   // Needed to support unsigned int computations. To be removed if we use a
   // scheme that does not rely on the UnrealizedConversionCastOp.
   target.addLegalOp<::mlir::UnrealizedConversionCastOp>();
