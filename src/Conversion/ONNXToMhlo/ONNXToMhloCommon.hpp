@@ -131,6 +131,10 @@ void populateLoweringONNXShapeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXSliceOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXSplitOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXTransposeOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXUnsqueezeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 } // namespace onnx_mlir

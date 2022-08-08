@@ -24,7 +24,9 @@ add_onnx_mlir_library(OMONNXToMhlo
   Tensor/Reshape.cpp
   Tensor/Shape.cpp
   Tensor/Slice.cpp
+  Tensor/Split.cpp
   Tensor/Transpose.cpp
+  Tensor/Unsqueeze.cpp
 
   LINK_LIBS PUBLIC
   Accelerator
