@@ -119,11 +119,15 @@ void populateLoweringONNXNormalizationOpToMhloPattern(
 void populateLoweringONNXPoolingOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 // `Tensor` directory methods:
+void populateLoweringONNXArgMaxOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXConcatOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXConstantOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXGatherOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXIdentityOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXReshapeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
@@ -132,6 +136,8 @@ void populateLoweringONNXShapeOpToMhloPattern(
 void populateLoweringONNXSliceOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXSplitOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXSqueezeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXTransposeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);

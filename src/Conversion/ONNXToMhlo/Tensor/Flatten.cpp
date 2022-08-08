@@ -41,23 +41,22 @@ struct ONNXFlattenOpLoweringToMhlo : public ConversionPattern {
     int64_t axis = flattenOp.axis();
     axis = axis >= 0 ? axis : rank + axis;
     assert(axis >= -rank && axis <= rank - 1);
-
-    SmallVector<Value> dims;
+    
+    Value flattenDimFirst = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     for (int64_t i = 0; i < axis; i++) {
       Value dim = rewriter.create<tensor::DimOp>(loc, input, i);
-      dims.push_back(dim);
+      flattenDimFirst = rewriter.create<arith::MulIOp>(loc, flattenDimFirst, dim);
     }
-    Value flattenDimSize = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value flattenDimSecond = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     for (int64_t i = axis; i < rank; i++) {
       Value dim = rewriter.create<tensor::DimOp>(loc, input, i);
-      flattenDimSize = rewriter.create<arith::MulIOp>(loc, flattenDimSize, dim);
+      flattenDimSecond = rewriter.create<arith::MulIOp>(loc, flattenDimSecond, dim);
     }
-    dims.push_back(flattenDimSize);
+    SmallVector<Value> dims{flattenDimFirst, flattenDimSecond};
     Type elementType =
-        RankedTensorType::get({axis + 1}, rewriter.getIndexType());
+        RankedTensorType::get({2}, rewriter.getIndexType());
     Value outputShape =
         rewriter.create<tensor::FromElementsOp>(loc, elementType, dims);
-
     auto result = rewriter.create<mhlo::DynamicReshapeOp>(
       loc, *op->result_type_begin(), input, outputShape);
     rewriter.replaceOp(op, result->getResults());

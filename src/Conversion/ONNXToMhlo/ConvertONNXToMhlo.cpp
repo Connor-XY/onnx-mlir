@@ -30,13 +30,16 @@ void populateONNXToMhloConversionPattern(
   populateLoweringONNXNormalizationOpToMhloPattern(patterns, ctx);
   populateLoweringONNXPoolingOpToMhloPattern(patterns, ctx);
   // Tensor
+  populateLoweringONNXArgMaxOpToMhloPattern(patterns, ctx);
   populateLoweringONNXConcatOpToMhloPattern(patterns, ctx);
   populateLoweringONNXConstantOpToMhloPattern(patterns, ctx);
   populateLoweringONNXGatherOpToMhloPattern(patterns, ctx);
+  populateLoweringONNXIdentityOpToMhloPattern(patterns, ctx);
   populateLoweringONNXReshapeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXShapeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXSliceOpToMhloPattern(patterns, ctx);
   populateLoweringONNXSplitOpToMhloPattern(patterns, ctx);
+  populateLoweringONNXSqueezeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXTransposeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXUnsqueezeOpToMhloPattern(patterns, ctx);
 }
