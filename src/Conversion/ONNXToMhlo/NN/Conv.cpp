@@ -14,7 +14,6 @@
 
 #include "src/Conversion/ONNXToMhlo/ONNXToMhloCommon.hpp"
 #include "src/Dialect/ONNX/ShapeInference/ONNXShapeHelper.hpp"
-#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.h"
 
 using namespace mlir;
 
@@ -22,17 +21,9 @@ namespace onnx_mlir {
 
 namespace {
 
-void padVector(
-    SmallVectorImpl<int64_t> &inputVector, int64_t numPad, int64_t value) {
-  inputVector.insert(inputVector.begin(), numPad, value);
-}
-
-struct ONNXConvOpLoweringToMhlo
-    : public ConversionPattern {
+struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
   ONNXConvOpLoweringToMhlo(MLIRContext *ctx)
-      : ConversionPattern(
-            mlir::ONNXConvOp::getOperationName(), 1,
-            ctx) {}
+      : ConversionPattern(mlir::ONNXConvOp::getOperationName(), 1, ctx) {}
 
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
@@ -44,7 +35,6 @@ struct ONNXConvOpLoweringToMhlo
     ONNXConvOpShapeHelper shapeHelper(&convOp);
     auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
-
 
     auto kernelShape = shapeHelper.kernelShape;
     auto strides = shapeHelper.strides;
@@ -69,20 +59,21 @@ struct ONNXConvOpLoweringToMhlo
     // Onnx Input is NCHW
     int64_t spatialOffset = 2;
     int64_t rank = inputType.getRank();
+    int64_t kernelSize = kernelShape.size();
 
     SmallVector<int64_t> inputSpatialDimensions;
-    for (int64_t i = 2; i < rank; i++) {
-      inputSpatialDimensions.push_back(inputType.getDimSize(i));
+    for (int64_t i = spatialOffset; i < rank; i++) {
+      inputSpatialDimensions.push_back(i);
     }
 
-    SmallVector<int64_t> kernalDimensions;
-    for (size_t i = 0; i < kernelShape.size(); i++) {
-      kernalDimensions.push_back(kernelShape[i].getLiteral());
+    SmallVector<int64_t> kernelDimensions;
+    for (int64_t i = spatialOffset; i < spatialOffset + kernelSize; i++) {
+      kernelDimensions.push_back(i);
     }
 
     SmallVector<int64_t> outputSpatialDimensions;
-    for (int64_t i = 2; i < outputRank; i++) {
-      outputSpatialDimensions.push_back(outputDims[i].getLiteral());
+    for (int64_t i = spatialOffset; i < outputRank; i++) {
+      outputSpatialDimensions.push_back(i);
     }
 
     // paddings
@@ -90,9 +81,6 @@ struct ONNXConvOpLoweringToMhlo
     auto padding = convOp.auto_pad();
     int64_t spatialRank = rank - spatialOffset;
     SmallVector<int64_t> flattenPaddings;
-    for (int64_t i = 0; i < 2 * spatialOffset; i++) {
-      flattenPaddings.push_back(0);
-    }
     bool needPadding = (padding == "NOTSET");
     for (int64_t i = 0; i < spatialRank; i++) {
       if (!needPadding) {
@@ -109,21 +97,16 @@ struct ONNXConvOpLoweringToMhlo
       }
     }
 
-    padVector(strides, spatialOffset, 1);
-    padVector(dilations, spatialOffset, 1);
-
     auto dimension_numbers = mhlo::ConvDimensionNumbersAttr::get(
-            rewriter.getContext(), 0, 1, inputSpatialDimensions, 1, 0, kernalDimensions, 0, 1, outputSpatialDimensions);
+        rewriter.getContext(), 0, 1, inputSpatialDimensions, 1, 0,
+        kernelDimensions, 0, 1, outputSpatialDimensions);
 
-    auto convResult = rewriter.create<mhlo::ConvOp>(loc, outputType,
-        inputOperand, filterOperand,
-        rewriter.getI64VectorAttr(strides),
+    auto convResult = rewriter.create<mhlo::ConvolutionOp>(loc, outputType,
+        inputOperand, filterOperand, rewriter.getI64VectorAttr(strides),
         DenseIntElementsAttr::get(
-          RankedTensorType::get({rank, 2}, rewriter.getI64Type()),
-          flattenPaddings),
-        DenseIntElementsAttr(),
-        rewriter.getI64VectorAttr(dilations),
-        nullptr,
+            RankedTensorType::get({spatialRank, 2}, rewriter.getI64Type()),
+            flattenPaddings),
+        DenseIntElementsAttr(), rewriter.getI64VectorAttr(dilations), nullptr,
         dimension_numbers, groupNum, 1, nullptr);
 
     Value result;
@@ -135,9 +118,7 @@ struct ONNXConvOpLoweringToMhlo
           loc, outputType, biasOperand, rewriter.getI64TensorAttr({0}));
       result = rewriter.create<mhlo::AddOp>(loc, convResult, finalB);
     }
-
     rewriter.replaceOp(op, result);
-
     return success();
   }
 };

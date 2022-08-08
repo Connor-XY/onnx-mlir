@@ -33,7 +33,6 @@ struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
     assert(isRankedShapedType(input.getType()) &&
            "data must be ranked Shaped Type");
     ShapedType inputType = input.getType().cast<ShapedType>();
-    Type outputType = *op->result_type_begin();
     Type indiceType = rewriter.getI64Type();
     Location loc = op->getLoc();
     uint64_t rank = inputType.getRank();

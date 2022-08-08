@@ -2,13 +2,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-//===--------------- Unsqueeze.cpp - Lowering Unsqueeze Op ----------------===//
+//===--------------- Squeeze.cpp - Lowering Squeeze Op ----------------===//
 //
 // Copyright 2019-2022 The IBM Research Authors.
 //
 // =============================================================================
 //
-// This file lowers the ONNX Unsqueeze Operator to Mhlo dialect.
+// This file lowers the ONNX Squeeze Operator to Mhlo dialect.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,23 +20,23 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
-struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
-  ONNXUnsqueezeOpLoweringToMhlo(MLIRContext *ctx)
-      : ConversionPattern(mlir::ONNXUnsqueezeOp::getOperationName(), 1, ctx) {}
+struct ONNXSqueezeOpLoweringToMhlo : public ConversionPattern {
+  ONNXSqueezeOpLoweringToMhlo(MLIRContext *ctx)
+      : ConversionPattern(mlir::ONNXSqueezeOp::getOperationName(), 1, ctx) {}
 
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    ONNXUnsqueezeOpAdaptor operandAdaptor(operands);
-    ONNXUnsqueezeOp unsqueezeOp = llvm::cast<ONNXUnsqueezeOp>(op);
+    ONNXSqueezeOpAdaptor operandAdaptor(operands);
+    ONNXSqueezeOp squeezeOp = llvm::cast<ONNXSqueezeOp>(op);
     Location loc = op->getLoc();
-    Value data = unsqueezeOp.data();
-    Value axes = unsqueezeOp.axes();
+    Value data = squeezeOp.data();
+    Value axes = squeezeOp.axes();
     assert(isRankedShapedType(data.getType()) &&
            "data must be ranked Shaped Type");
     ShapedType dataType = data.getType().cast<ShapedType>();
     int64_t rank = dataType.getRank();
 
-    ONNXUnsqueezeOpShapeHelper shapeHelper(&unsqueezeOp);
+    ONNXSqueezeOpShapeHelper shapeHelper(&squeezeOp);
     auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
@@ -50,20 +50,16 @@ struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
       }
     }
 
-    int64_t newRank = rank + axesList.size();
+    int64_t newRank = rank - axesList.size();
     SmallVector<Value, 4> newShape;
-    SmallVector<bool, 4> isUnsqueezeDim(newRank, false);
+    SmallVector<bool, 4> isSqueezeDim(rank, false);
     for (int64_t axis : axesList) {
-      isUnsqueezeDim[axis] = true;
+      isSqueezeDim[axis] = true;
     }
-    for (int64_t i = 0, j = 0; i < newRank; i++) {
-      if (isUnsqueezeDim[i]) {
-        Value indexValue = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-        newShape.push_back(indexValue);
-      } else {
-        Value dim = rewriter.create<tensor::DimOp>(loc, data, j);
+    for (int64_t i = 0; i < rank; i++) {
+      if (!isSqueezeDim[i]) {
+        Value dim = rewriter.create<tensor::DimOp>(loc, data, i);
         newShape.push_back(dim);
-        j++;
       }
     }
     Type outputShapeType =
@@ -78,9 +74,9 @@ struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
   }
 };
 
-void populateLoweringONNXUnsqueezeOpToMhloPattern(
+void populateLoweringONNXSqueezeOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {
-  patterns.insert<ONNXUnsqueezeOpLoweringToMhlo>(ctx);
+  patterns.insert<ONNXSqueezeOpLoweringToMhlo>(ctx);
 }
 
 } // namespace onnx_mlir
