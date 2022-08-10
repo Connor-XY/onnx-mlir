@@ -114,8 +114,9 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
       result = convResult;
     } else {
       Value finalB;
-      finalB = rewriter.create<mhlo::BroadcastInDimOp>(
-          loc, outputType, biasOperand, rewriter.getI64TensorAttr({0}));
+      Value resultShape = rewriter.create<shape::ShapeOfOp>(loc, convResult);
+      finalB = rewriter.create<mhlo::DynamicBroadcastInDimOp>(
+          loc, outputType, biasOperand, resultShape, rewriter.getI64TensorAttr({1}));
       result = rewriter.create<mhlo::AddOp>(loc, convResult, finalB);
     }
     rewriter.replaceOp(op, result);

@@ -53,6 +53,7 @@ struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
     int64_t newRank = rank + axesList.size();
     SmallVector<Value, 4> newShape;
     SmallVector<bool, 4> isUnsqueezeDim(newRank, false);
+    Value dataShape = rewriter.create<shape::ShapeOfOp>(loc, data);
     for (int64_t axis : axesList) {
       isUnsqueezeDim[axis] = true;
     }
@@ -61,7 +62,7 @@ struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
         Value indexValue = rewriter.create<arith::ConstantIndexOp>(loc, 1);
         newShape.push_back(indexValue);
       } else {
-        Value dim = rewriter.create<tensor::DimOp>(loc, data, j);
+        Value dim = rewriter.create<shape::GetExtentOp>(loc, dataShape, j);
         newShape.push_back(dim);
         j++;
       }
@@ -69,7 +70,8 @@ struct ONNXUnsqueezeOpLoweringToMhlo : public ConversionPattern {
     Type outputShapeType =
         RankedTensorType::get({newRank}, rewriter.getIndexType());
     Value newShapeValue =
-        rewriter.create<tensor::FromElementsOp>(loc, outputShapeType, newShape);
+        rewriter.create<shape::FromExtentsOp>(loc, newShape);
+    newShapeValue = rewriter.create<shape::ToExtentTensorOp>(loc, outputShapeType, newShapeValue);
     Type outputType = *op->result_type_begin();
     Value result = rewriter.create<mhlo::DynamicReshapeOp>(
         loc, outputType, data, newShapeValue);
