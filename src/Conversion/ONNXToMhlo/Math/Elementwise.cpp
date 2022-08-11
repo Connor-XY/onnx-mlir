@@ -152,9 +152,7 @@ struct ONNXElementwiseUnaryOpLoweringToMhlo : public ConversionPattern {
       : ConversionPattern(ElementwiseUnaryOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(StringAttr::get(op->getContext(),
-                                    ElementwiseUnaryOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
     Value mhloOp = rewriter.create<MhloOp<ElementwiseUnaryOp>>(
         loc, op->getResultTypes(), op->getOperands());
     rewriter.replaceOp(op, mhloOp);
@@ -169,9 +167,7 @@ struct ONNXElementwiseUnaryOpLoweringToMhlo<ONNXReluOp>
       : ConversionPattern(ONNXReluOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(
-        StringAttr::get(op->getContext(), ONNXReluOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
     ONNXReluOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value inp = adaptor.X();
     ShapedType inpType = inp.getType().dyn_cast_or_null<ShapedType>();
@@ -193,9 +189,7 @@ struct ONNXElementwiseUnaryOpLoweringToMhlo<ONNXCastOp>
       : ConversionPattern(ONNXCastOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(
-        StringAttr::get(op->getContext(), ONNXCastOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
     ONNXCastOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value inp = adaptor.input();
     Type elementToType = adaptor.to();
@@ -216,9 +210,7 @@ struct ONNXElementwiseBinaryOpLoweringToMhlo : public ConversionPattern {
       : ConversionPattern(ElementwiseBinaryOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(StringAttr::get(op->getContext(),
-                                    ElementwiseBinaryOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
 
     ONNXGenericOpBroadcastedShapeHelper shapeHelper(op);
     DimsExpr empty;
@@ -244,9 +236,7 @@ struct ONNXElementwiseBinaryOpLoweringToMhlo<ONNXPowOp>
       : ConversionPattern(ONNXPowOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(
-        StringAttr::get(op->getContext(), ONNXPowOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
 
     ONNXGenericOpBroadcastedShapeHelper shapeHelper(op);
     DimsExpr empty;
@@ -273,9 +263,7 @@ struct ONNXElementwiseVariadicOpLoweringToMhlo : public ConversionPattern {
       : ConversionPattern(ElementwiseVariadicOp::getOperationName(), 1, ctx) {}
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    Location loc = NameLoc::get(StringAttr::get(op->getContext(),
-                                    ElementwiseVariadicOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
 
     ONNXGenericOpBroadcastedShapeHelper shapeHelper(op);
     DimsExpr empty;
