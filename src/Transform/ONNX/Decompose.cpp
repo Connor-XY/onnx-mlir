@@ -202,7 +202,9 @@ struct DecomposeONNXToONNXPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DecomposeONNXToONNXPass)
 
   DecomposeONNXToONNXPass(const std::string &target) { this->target = target; }
-  DecomposeONNXToONNXPass(const DecomposeONNXToONNXPass &pass) {}
+  DecomposeONNXToONNXPass(const DecomposeONNXToONNXPass &pass) : BaseType() {
+    this->target = pass.target;
+  }
 
   StringRef getArgument() const override { return "decompose-onnx"; }
 
@@ -215,6 +217,9 @@ struct DecomposeONNXToONNXPass
       llvm::cl::desc("Target Dialect to decompose into"), ::llvm::cl::init("")};
 
   void runOnOperation() final;
+
+  typedef PassWrapper<DecomposeONNXToONNXPass, OperationPass<func::FuncOp>>
+      BaseType;
 };
 
 void DecomposeONNXToONNXPass::runOnOperation() {
