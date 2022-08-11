@@ -28,7 +28,8 @@ std::unique_ptr<mlir::Pass> createONNXOpTransformPass(
     int threshold, bool report);
 
 /// Pass for rewriting inside frontend dialect.
-std::unique_ptr<mlir::Pass> createDecomposeONNXToONNXPass();
+std::unique_ptr<mlir::Pass> createDecomposeONNXToONNXPass(
+    const std::string &target = "");
 
 std::unique_ptr<mlir::Pass> createShapeInferencePass(
     bool analyzeAllFunctions = false);

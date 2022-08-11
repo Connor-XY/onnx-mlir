@@ -113,8 +113,8 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
       dotProduct = rewriter.create<mhlo::DotOp>(
           loc, broadcastedA, broadcastedB, nullptr);
       if (aRank == 1 && bRank == 1)
-        dotProduct = rewriter.create<mhlo::BroadcastInDimOp>(loc, outputType,
-            dotProduct, rewriter.getI64TensorAttr({}));
+        dotProduct = rewriter.create<mhlo::BroadcastInDimOp>(
+            loc, outputType, dotProduct, rewriter.getI64TensorAttr({}));
     }
     rewriter.replaceOp(op, dotProduct);
     return success();
