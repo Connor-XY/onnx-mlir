@@ -34,9 +34,7 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
     // Get shape.
     ONNXMatMulOpAdaptor operandAdaptor(operands);
     ONNXMatMulOp matMulOp = llvm::cast<ONNXMatMulOp>(op);
-    Location loc = NameLoc::get(
-        StringAttr::get(op->getContext(), ONNXMatMulOp::getOperationName()),
-        op->getLoc());
+    Location loc = op->getLoc();
     ONNXMatMulOpShapeHelper shapeHelper(&matMulOp);
     LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
