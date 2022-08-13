@@ -14,10 +14,14 @@ func.func @test_squeeze_unknown_dimensions(%arg0 : tensor<?x1x32x?x64xf32>) -> t
   "func.return"(%1) : (tensor<*xf32>) -> ()
 // CHECK-LABEL: func @test_squeeze_unknown_dimensions
 // CHECK-SAME: ([[PARAM_0_:%.+]]: tensor<?x1x32x?x64xf32>)
-// CHECK-DAG:    [[C64:%.+]] = arith.constant 64 : index
-// CHECK-DAG:    [[C32:%.+]] = arith.constant 32 : index
+// CHECK-DAG:    [[C4:%.+]] = arith.constant 4 : index
+// CHECK-DAG:    [[C2:%.+]] = arith.constant 2 : index
 // CHECK-DAG:    [[C0:%.+]] = arith.constant 0 : index
-// CHECK-NEXT:   [[VAR_0_:%.+]] = tensor.dim [[PARAM_0_]], [[C0]] : tensor<?x1x32x?x64xf32>
-// CHECK-NEXT:   [[VAR_1_:%.+]] = tensor.from_elements [[VAR_0_]], [[C32]], [[C64]] : tensor<3xindex>
-// CHECK-NEXT:   [[VAR_2_:%.+]] = "mhlo.dynamic_reshape"([[PARAM_0_]], [[VAR_1_]]) : (tensor<?x1x32x?x64xf32>, tensor<3xindex>) -> tensor<?x32x64xf32>
+// CHECK-NEXT:   %0 = shape.shape_of %arg0 : tensor<?x1x32x?x64xf32> -> tensor<5xindex>
+// CHECK-DAG:    [[VAR_1_:%.+]] = shape.get_extent %0, [[C0]] : tensor<5xindex>, index -> index
+// CHECK-DAG:    [[VAR_2_:%.+]] = shape.get_extent %0, [[C2]] : tensor<5xindex>, index -> index
+// CHECK-DAG:    [[VAR_3_:%.+]] = shape.get_extent %0, [[C4]] : tensor<5xindex>, index -> index
+// CHECK-NEXT:   [[VAR_4_:%.+]] = shape.from_extents [[VAR_1_]], [[VAR_2_]], [[VAR_3_]] : index, index, index
+// CHECK-NEXT:   [[VAR_5_:%.+]] = shape.to_extent_tensor [[VAR_4_]] : !shape.shape -> tensor<3xindex>
+// CHECK-NEXT:   [[VAR_6_:%.+]] = "mhlo.dynamic_reshape"(%arg0, [[VAR_5_]]) : (tensor<?x1x32x?x64xf32>, tensor<3xindex>) -> tensor<?x32x64xf32>
 }
