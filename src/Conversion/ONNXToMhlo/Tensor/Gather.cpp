@@ -51,13 +51,14 @@ struct ONNXGatherOpLoweringToMhlo : public ConversionPattern {
     // start indices
     Value zero = getShapedZero(loc, rewriter, indices);
     Value axisDimSize;
-    if (indicesType.hasStaticShape()) {
-      int64_t axisDimSizeLit = indicesType.getShape()[axisLit];
+    if (inputType.hasStaticShape()) {
+      int64_t axisDimSizeLit = inputType.getShape()[axisLit];
       axisDimSize = getShapedInt(loc, rewriter, axisDimSizeLit, indices);
     } else {
+      Value inputShape = rewriter.create<shape::ShapeOfOp>(loc, data);
       Value indicesShape = rewriter.create<shape::ShapeOfOp>(loc, indices);
       Value axisDimSizeIndexValue =
-          rewriter.create<shape::GetExtentOp>(loc, indicesShape, axisLit);
+          rewriter.create<shape::GetExtentOp>(loc, inputShape, axisLit);
       Value axisDimSizeValue = rewriter.create<arith::IndexCastOp>(
           loc, indicesType.getElementType(), axisDimSizeIndexValue);
       axisDimSize =

@@ -17,7 +17,7 @@ func.func @test_gather_axis0neg(%arg0 : tensor<3x2xf32>) -> tensor<2x2x2xf32> {
 // CHECK-LABEL: func.func @test_gather_axis0neg
 // CHECK-SAME: ([[PARAM_0_:%.+]]: tensor<3x2xf32>) -> tensor<2x2x2xf32> {
 // CHECK-DAG:    [[VAR_0_:%.+]] = mhlo.constant
-// CHECK-SAME{LITERAL}: dense<[[2, 1], [3, 4]]> : tensor<2x2xi64>
+// CHECK-SAME{LITERAL}: dense<[[3, 2], [4, 5]]> : tensor<2x2xi64>
 // CHECK-DAG:    [[VAR_1_:%.+]] = mhlo.constant
 // CHECK-SAME{LITERAL}: dense<[[false, true], [false, false]]> : tensor<2x2xi1>
 // CHECK-DAG:    [[VAR_2_:%.+]] = mhlo.constant
