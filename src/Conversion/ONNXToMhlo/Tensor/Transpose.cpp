@@ -20,6 +20,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXTransposeOpLoweringToMhlo : public ConversionPattern {
   ONNXTransposeOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXTransposeOp::getOperationName(), 1, ctx) {}
@@ -40,18 +42,19 @@ struct ONNXTransposeOpLoweringToMhlo : public ConversionPattern {
     int64_t rank = outputShapedType.getShape().size();
 
     // Attributes
-    auto permAttr = transposeOp.perm();
+    llvm::Optional<ArrayAttr> permAttr = transposeOp.perm();
     DenseIntElementsAttr permAxis;
-    RankedTensorType permAxisType = RankedTensorType::get({rank}, rewriter.getI64Type());
+    RankedTensorType permAxisType =
+        RankedTensorType::get({rank}, rewriter.getI64Type());
     SmallVector<int64_t, 4> permAxisList;
-    if(permAttr.hasValue()) {
-      for(int64_t i = 0; i < rank; ++i)
+    if (permAttr.hasValue()) {
+      for (int64_t i = 0; i < rank; ++i)
         permAxisList.push_back(ArrayAttrIntVal(permAttr, i));
       permAxis = DenseIntElementsAttr::get(permAxisType, permAxisList);
     } else {
-      for(int64_t i = 0; i < rank; ++i)
+      for (int64_t i = 0; i < rank; ++i)
         permAxisList.push_back(rank - 1 - i);
-      permAxis = DenseIntElementsAttr::get(permAxisType, permAxisList);      
+      permAxis = DenseIntElementsAttr::get(permAxisType, permAxisList);
     }
 
     // Get a shape helper.
@@ -59,15 +62,18 @@ struct ONNXTransposeOpLoweringToMhlo : public ConversionPattern {
     LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
-    Value transposeValue = rewriter.create<mhlo::TransposeOp>(loc, outputType, data, permAxis);
+    Value transposeValue =
+        rewriter.create<mhlo::TransposeOp>(loc, outputType, data, permAxis);
     rewriter.replaceOp(op, transposeValue);
 
     return success();
   }
 };
 
-void populateLoweringONNXTransposeOpToMhloPattern(RewritePatternSet &patterns,
-    MLIRContext *ctx) {
+} // namespace
+
+void populateLoweringONNXTransposeOpToMhloPattern(
+    RewritePatternSet &patterns, MLIRContext *ctx) {
   patterns.insert<ONNXTransposeOpLoweringToMhlo>(ctx);
 }
 

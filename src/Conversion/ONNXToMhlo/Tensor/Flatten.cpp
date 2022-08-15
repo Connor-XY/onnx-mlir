@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/Conversion/ONNXToMhlo/ONNXToMhloCommon.hpp"
+#include "src/Support/TypeUtilities.hpp"
 
 using namespace mlir;
 
@@ -32,12 +33,9 @@ struct ONNXFlattenOpLoweringToMhlo : public ConversionPattern {
     ONNXFlattenOp flattenOp = llvm::cast<ONNXFlattenOp>(op);
 
     Value input = operandAdaptor.input();
-    auto inputType = input.getType().cast<RankedTensorType>();
-    if (inputType == nullptr) {
-      op->emitError() << "Flatten Output Is Not Ranked\n";
-      return failure();
-    }
-    auto rank = inputType.getRank();
+    assert(isRankedShapedType(input.getType()) && "Expected Ranked ShapedType");
+    ShapedType inputType = input.getType().cast<ShapedType>();
+    int64_t rank = inputType.getRank();
     int64_t axis = flattenOp.axis();
     axis = axis >= 0 ? axis : rank + axis;
     assert(axis >= -rank && axis <= rank - 1);
@@ -54,11 +52,11 @@ struct ONNXFlattenOpLoweringToMhlo : public ConversionPattern {
       flattenDimSecond = rewriter.create<shape::MulOp>(loc, flattenDimSecond, dim);
     }
     SmallVector<Value> dims{flattenDimFirst, flattenDimSecond};
-    Type elementType =
+    Type outputShapeType =
         RankedTensorType::get({2}, rewriter.getIndexType());
     Value outputShape =
         rewriter.create<shape::FromExtentsOp>(loc, dims);
-    outputShape = rewriter.create<shape::ToExtentTensorOp>(loc, elementType, outputShape);
+    outputShape = rewriter.create<shape::ToExtentTensorOp>(loc, outputShapeType, outputShape);
     auto result = rewriter.create<mhlo::DynamicReshapeOp>(
       loc, *op->result_type_begin(), input, outputShape);
     rewriter.replaceOp(op, result->getResults());

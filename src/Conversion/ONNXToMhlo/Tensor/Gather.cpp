@@ -20,6 +20,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXGatherOpLoweringToMhlo : public ConversionPattern {
   ONNXGatherOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXGatherOp::getOperationName(), 1, ctx) {}
@@ -31,7 +33,7 @@ struct ONNXGatherOpLoweringToMhlo : public ConversionPattern {
     Location loc = op->getLoc();
 
     ONNXGatherOpShapeHelper shapeHelper(&gatherOp);
-    auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
+    LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
     Type outputType = *op->result_type_begin();
@@ -79,6 +81,8 @@ struct ONNXGatherOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXGatherOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {

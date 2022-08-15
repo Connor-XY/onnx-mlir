@@ -79,7 +79,6 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
     Value inputShape = rewriter.create<shape::ShapeOfOp>(loc, data);
 
     for (int64_t i = 0; i < rank; ++i) {
-
       Value dimValue;
       if (dataType.getShape()[i] != ShapedType::kDynamicSize)
         dimValue = rewriter.create<mhlo::ConstantOp>(
@@ -89,11 +88,9 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
       else {
         Value dimIndexValue =
             rewriter.create<shape::GetExtentOp>(loc, inputShape, i);
-        Value dimValueInteger = rewriter.create<arith::IndexCastOp>(
-            loc, indiceElementType, dimIndexValue);
-        dimValue = rewriter.create<tensor::FromElementsOp>(loc,
-            RankedTensorType::get({1}, indiceElementType),
-            ArrayRef<Value>{dimValueInteger});
+        dimValue = rewriter.create<shape::FromExtentsOp>(loc, dimIndexValue);
+        dimValue = rewriter.create<shape::ToExtentTensorOp>(loc, RankedTensorType::get({1}, rewriter.getIndexType()), dimValue);
+        dimValue = rewriter.create<arith::IndexCastOp>(loc, RankedTensorType::get({1}, indiceElementType), dimValue);
       }
       if (axesIntLitToIdx[i] == -1) {
         beginValues.push_back(zero);
@@ -133,17 +130,14 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
             DenseIntElementsAttr::get(
                 RankedTensorType::get({1}, indiceElementType),
                 ArrayRef<int64_t>{1}));
-        // negative step;
-        // negative start;
-        // negative end;
-        // truncate end;
         Value isNegativeStepValue = rewriter.create<mhlo::CompareOp>(
             loc, stepValue, zero, mhlo::ComparisonDirection::LT);
         Value broadcastedIsNegativeValue =
             rewriter.create<mhlo::DynamicBroadcastInDimOp>(loc,
                 RankedTensorType::get(
                     dataType.getShape(), rewriter.getI1Type()),
-                isNegativeStepValue, inputShape, rewriter.getI64TensorAttr({0}));
+                isNegativeStepValue, inputShape,
+                rewriter.getI64TensorAttr({0}));
         Value negatedStepValue = rewriter.create<mhlo::NegOp>(loc, stepValue);
         Value negatedStartValue =
             rewriter.create<mhlo::AddOp>(loc, endValue, one);
@@ -173,7 +167,8 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
             loc, negDimValue, posDimValue, clampedEndValue);
         Value negStartValue = rewriter.create<mhlo::CompareOp>(
             loc, beginValue, zero, mhlo::ComparisonDirection::LT);
-        Value posStartValue = rewriter.create<mhlo::AddOp>(loc, beginValue, dimValue);
+        Value posStartValue =
+            rewriter.create<mhlo::AddOp>(loc, beginValue, dimValue);
         Value resultBeginValue = rewriter.create<mhlo::SelectOp>(
             loc, negStartValue, posStartValue, beginValue);
         beginValues.push_back(resultBeginValue);
@@ -182,13 +177,7 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
       }
     }
 
-    // ONNXSliceOpShapeHelper shapeHelper(&sliceOp);
-    // auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
-    // assert(succeeded(shapecomputed) && "Could not compute output shape");
-
     Type outputType = *op->result_type_begin();
-    // int64_t outputRank = shapeHelper.dimsForOutput().size();
-
     auto start_indices = rewriter.create<mhlo::ConcatenateOp>(loc,
         RankedTensorType::get(
             {static_cast<int64_t>(beginValues.size())}, indiceElementType),

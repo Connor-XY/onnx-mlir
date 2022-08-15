@@ -20,6 +20,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXSqueezeOpLoweringToMhlo : public ConversionPattern {
   ONNXSqueezeOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXSqueezeOp::getOperationName(), 1, ctx) {}
@@ -37,11 +39,12 @@ struct ONNXSqueezeOpLoweringToMhlo : public ConversionPattern {
     int64_t rank = dataType.getRank();
 
     ONNXSqueezeOpShapeHelper shapeHelper(&squeezeOp);
-    auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
+    LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
     SmallVector<int64_t, 4> axesList;
-    if (auto axesAttr = getDenseElementAttributeFromONNXValue(axes)) {
+    if (DenseElementsAttr axesAttr =
+            getDenseElementAttributeFromONNXValue(axes)) {
       for (IntegerAttr value : axesAttr.getValues<IntegerAttr>()) {
         int64_t axis = value.cast<IntegerAttr>().getInt();
         if (axis < 0)
@@ -65,9 +68,9 @@ struct ONNXSqueezeOpLoweringToMhlo : public ConversionPattern {
     }
     Type outputShapeType =
         RankedTensorType::get({newRank}, rewriter.getIndexType());
-    Value newShapeValue =
-        rewriter.create<shape::FromExtentsOp>(loc, newShape);
-    newShapeValue = rewriter.create<shape::ToExtentTensorOp>(loc, outputShapeType, newShapeValue);
+    Value newShapeValue = rewriter.create<shape::FromExtentsOp>(loc, newShape);
+    newShapeValue = rewriter.create<shape::ToExtentTensorOp>(
+        loc, outputShapeType, newShapeValue);
     Type outputType = *op->result_type_begin();
     Value result = rewriter.create<mhlo::DynamicReshapeOp>(
         loc, outputType, data, newShapeValue);
@@ -75,6 +78,8 @@ struct ONNXSqueezeOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXSqueezeOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {
