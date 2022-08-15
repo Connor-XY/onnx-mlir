@@ -113,6 +113,8 @@ void populateLoweringONNXMatMulOpToMhloPattern(
 void populateLoweringONNXReductionOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 // `NN` directory methods:
+void populateLoweringONNXConvOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXNormalizationOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXPoolingOpToMhloPattern(
@@ -123,6 +125,8 @@ void populateLoweringONNXArgMaxOpToMhloPattern(
 void populateLoweringONNXConcatOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXConstantOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXFlattenOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXGatherOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);

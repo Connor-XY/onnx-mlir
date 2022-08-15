@@ -2,7 +2,7 @@
 
 add_subdirectory(ONNXToKrnl)
 if (ONNX_MLIR_ENABLE_MHLO)
-    add_subdirectory(ONNXToMhlo)
+  add_subdirectory(ONNXToMhlo)
 endif()
 add_subdirectory(KrnlToLLVM)
 add_subdirectory(KrnlToAffine)

@@ -89,8 +89,10 @@ struct ONNXSliceOpLoweringToMhlo : public ConversionPattern {
         Value dimIndexValue =
             rewriter.create<shape::GetExtentOp>(loc, inputShape, i);
         dimValue = rewriter.create<shape::FromExtentsOp>(loc, dimIndexValue);
-        dimValue = rewriter.create<shape::ToExtentTensorOp>(loc, RankedTensorType::get({1}, rewriter.getIndexType()), dimValue);
-        dimValue = rewriter.create<arith::IndexCastOp>(loc, RankedTensorType::get({1}, indiceElementType), dimValue);
+        dimValue = rewriter.create<shape::ToExtentTensorOp>(
+            loc, RankedTensorType::get({1}, rewriter.getIndexType()), dimValue);
+        dimValue = rewriter.create<arith::IndexCastOp>(
+            loc, RankedTensorType::get({1}, indiceElementType), dimValue);
       }
       if (axesIntLitToIdx[i] == -1) {
         beginValues.push_back(zero);

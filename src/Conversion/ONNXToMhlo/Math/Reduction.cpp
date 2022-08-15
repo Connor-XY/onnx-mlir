@@ -41,9 +41,9 @@ template <>
 Value getIdentityValue<ONNXReduceMinOp>(
     ConversionPatternRewriter &rewriter, Location loc, FloatType elemType) {
   return rewriter.create<mhlo::ConstantOp>(
-      loc, rewriter.getFloatAttr(elemType,
-               APFloat::getInf(elemType.getFloatSemantics(),
-                   /*isNegative=*/false)));
+      loc, rewriter.getFloatAttr(
+               elemType, APFloat::getInf(elemType.getFloatSemantics(),
+                             /*isNegative=*/false)));
 }
 
 template <>

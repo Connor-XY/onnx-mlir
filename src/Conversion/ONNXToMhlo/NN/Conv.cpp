@@ -37,7 +37,7 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
-    llvm::SmallVector<IndexExpr, 2>  kernelShape = shapeHelper.kernelShape;
+    llvm::SmallVector<IndexExpr, 2> kernelShape = shapeHelper.kernelShape;
     llvm::SmallVector<int64_t, 2> strides = shapeHelper.strides;
     llvm::SmallVector<int64_t, 2> dilations = shapeHelper.dilations;
     DimsExpr outputDims = shapeHelper.dimsForOutput();
@@ -48,8 +48,9 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     Value biasOperand = operandAdaptor.B();
     bool hasBias = !biasOperand.getType().isa<NoneType>();
     int64_t groupNum = convOp.group();
-    
-    assert(isRankedShapedType(inputOperand.getType()) && "Expected Ranked ShapedType");
+
+    assert(isRankedShapedType(inputOperand.getType()) &&
+           "Expected Ranked ShapedType");
     ShapedType inputType = inputOperand.getType().cast<ShapedType>();
     llvm::ArrayRef<int64_t> inputShape = inputType.getShape();
     Type outputType = *op->result_type_begin();
@@ -94,9 +95,10 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
       }
     }
 
-    mhlo::ConvDimensionNumbersAttr dimension_numbers = mhlo::ConvDimensionNumbersAttr::get(
-        rewriter.getContext(), 0, 1, inputSpatialDimensions, 1, 0,
-        kernelDimensions, 0, 1, outputSpatialDimensions);
+    mhlo::ConvDimensionNumbersAttr dimension_numbers =
+        mhlo::ConvDimensionNumbersAttr::get(rewriter.getContext(), 0, 1,
+            inputSpatialDimensions, 1, 0, kernelDimensions, 0, 1,
+            outputSpatialDimensions);
 
     Value convResult = rewriter.create<mhlo::ConvolutionOp>(loc, outputType,
         inputOperand, filterOperand, rewriter.getI64VectorAttr(strides),
@@ -112,8 +114,8 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     } else {
       Value finalB;
       Value resultShape = rewriter.create<shape::ShapeOfOp>(loc, convResult);
-      finalB = rewriter.create<mhlo::DynamicBroadcastInDimOp>(
-          loc, outputType, biasOperand, resultShape, rewriter.getI64TensorAttr({1}));
+      finalB = rewriter.create<mhlo::DynamicBroadcastInDimOp>(loc, outputType,
+          biasOperand, resultShape, rewriter.getI64TensorAttr({1}));
       result = rewriter.create<mhlo::AddOp>(loc, convResult, finalB);
     }
     rewriter.replaceOp(op, result);

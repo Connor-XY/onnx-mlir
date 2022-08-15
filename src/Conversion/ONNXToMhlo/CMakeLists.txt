@@ -16,11 +16,13 @@ add_onnx_mlir_library(OMONNXToMhlo
   Math/Gemm.cpp
   Math/MatMul.cpp
   Math/Reduction.cpp
+  NN/Conv.cpp
   NN/Normalization.cpp
   NN/Pooling.cpp
   Tensor/ArgMax.cpp
   Tensor/Concat.cpp
   Tensor/Constant.cpp
+  Tensor/Flatten.cpp
   Tensor/Gather.cpp
   Tensor/Identity.cpp
   Tensor/Reshape.cpp

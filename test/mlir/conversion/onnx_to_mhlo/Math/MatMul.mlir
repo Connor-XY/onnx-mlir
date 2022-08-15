@@ -44,10 +44,9 @@ func.func @test_onnx_to_matmul3d_dyn(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?
 func.func @test_onnx_1d(%arg0 : tensor<6xf32>, %arg1 : tensor<6xf32>) -> tensor<*xf32> {
   %0 = "onnx.MatMul"(%arg0, %arg1) : (tensor<6xf32>, tensor<6xf32>) -> tensor<*xf32>
   "func.return"(%0) : (tensor<*xf32>) -> ()
-  // CHECK: func.func @test_onnx_1d(%arg0: tensor<6xf32>, %arg1: tensor<6xf32>) -> tensor<1xf32> {
+  // CHECK: func.func @test_onnx_1d(%arg0: tensor<6xf32>, %arg1: tensor<6xf32>) -> tensor<f32> {
   // CHECK:   %0 = "mhlo.dot"(%arg0, %arg1) : (tensor<6xf32>, tensor<6xf32>) -> tensor<f32>
-  // CHECK:   %1 = "mhlo.reshape"(%0) : (tensor<f32>) -> tensor<1xf32>
-  // CHECK:   return %1 : tensor<1xf32>
+  // CHECK:   return %0 : tensor<f32>
 }
 
 func.func @test_onnx_12d(%arg0 : tensor<6xf32>, %arg1 : tensor<6x2xf32>) -> tensor<*xf32> {
