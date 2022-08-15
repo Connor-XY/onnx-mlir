@@ -20,6 +20,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 static void BuildArgmaxReductionBody(
     Type elementType, Type indexElementType, Region *body, OpBuilder *builder) {
   OpBuilder::InsertionGuard guard(*builder);
@@ -59,13 +61,13 @@ struct ONNXArgMaxOpLoweringToMhlo : public ConversionPattern {
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
     // Gather info.
-    auto loc = op->getLoc();
+    Location loc = op->getLoc();
     ONNXArgMaxOpAdaptor operandAdaptor(operands);
     ONNXArgMaxOp argMaxOp = llvm::cast<ONNXArgMaxOp>(op);
 
     // shape helper
     ONNXArgMaxOpShapeHelper shapeHelper(&argMaxOp);
-    auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
+    LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     (void)shapecomputed;
     assert(!failed(shapecomputed) && "expected to succeed");
 
@@ -127,7 +129,7 @@ struct ONNXArgMaxOpLoweringToMhlo : public ConversionPattern {
         SmallVector<Value> dims;
         for (int64_t i = 0; i < dataRank; i++) {
           if (i != axis) {
-            Value dim = rewriter.create<tensor::DimOp>(loc, data, i);
+            Value dim = rewriter.create<shape::GetExtentOp>(loc, inputShape, i);
             dims.push_back(dim);
           } else {
             Value dim = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -136,8 +138,9 @@ struct ONNXArgMaxOpLoweringToMhlo : public ConversionPattern {
         }
         Type outputShapeType =
             RankedTensorType::get({dataRank}, rewriter.getIndexType());
-        Value newShapeValue =
-            rewriter.create<tensor::FromElementsOp>(loc, outputShapeType, dims);
+        Value newShapeValue = rewriter.create<shape::FromExtentsOp>(loc, dims);
+        newShapeValue = rewriter.create<shape::ToExtentTensorOp>(
+            loc, outputShapeType, newShapeValue);
         result = rewriter.create<mhlo::DynamicReshapeOp>(
             loc, outputType, result, newShapeValue);
       }
@@ -146,6 +149,8 @@ struct ONNXArgMaxOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXArgMaxOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {

@@ -97,8 +97,9 @@ func.func @dyntest_slice_constant_dynshape_not_spliced(%arg0 : tensor<?x4x5xf32>
 // CHECK-DAG:    [[C0:%.+]] = arith.constant 0 : index
 // CHECK:    [[VAR_5_:%.+]] = shape.shape_of [[PARAM_0_]] : tensor<?x4x5xf32> -> tensor<3xindex>
 // CHECK:    [[VAR_6_:%.+]] = shape.get_extent [[VAR_5_]], [[C0]] : tensor<3xindex>, index -> index
-// CHECK:    [[VAR_7_:%.+]] = arith.index_cast [[VAR_6_]] : index to i64
-// CHECK:    [[VAR_8_:%.+]] = tensor.from_elements [[VAR_7_]] : tensor<1xi64>
+// CHECK:    [[VAR_7_:%.+]] = shape.from_extents [[VAR_6_]] : index
+// CHECK:    [[VAR_17_:%.+]] = shape.to_extent_tensor [[VAR_7_]] : !shape.shape -> tensor<1xindex>
+// CHECK:    [[VAR_8_:%.+]] = arith.index_cast [[VAR_17_]] : tensor<1xindex> to tensor<1xi64>
 // CHECK:    [[VAR_9_:%.+]] = "mhlo.dynamic_broadcast_in_dim"([[VAR_2_]], [[VAR_5_]]) {broadcast_dimensions = dense<0> : tensor<1xi64>} : (tensor<1xi1>, tensor<3xindex>) -> tensor<?x4x5xi1>
 // CHECK:    [[VAR_10_:%.+]] = "mhlo.reverse"([[PARAM_0_]]) {dimensions = dense<1> : tensor<1xi64>} : (tensor<?x4x5xf32>) -> tensor<?x4x5xf32>
 // CHECK:    [[VAR_11_:%.+]] = "mhlo.select"([[VAR_9_]], [[VAR_10_]], [[PARAM_0_]]) : (tensor<?x4x5xi1>, tensor<?x4x5xf32>, tensor<?x4x5xf32>) -> tensor<?x4x5xf32>

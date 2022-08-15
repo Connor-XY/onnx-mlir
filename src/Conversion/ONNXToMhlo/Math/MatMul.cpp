@@ -12,26 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Debug.h"
-
 #include "src/Conversion/ONNXToMhlo/ONNXToMhloCommon.hpp"
 #include "src/Dialect/ONNX/ShapeInference/ONNXShapeHelper.hpp"
 #include "src/Support/TypeUtilities.hpp"
-
-#define DEBUG_TYPE "matmul"
-static constexpr int32_t DISABLE_MAT_VEC_PRODUCT = 0;
 
 using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
 struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
   ONNXMatMulOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXMatMulOp::getOperationName(), 1, ctx) {}
 
   LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
       ConversionPatternRewriter &rewriter) const final {
-    // Get shape.
     ONNXMatMulOpAdaptor operandAdaptor(operands);
     ONNXMatMulOp matMulOp = llvm::cast<ONNXMatMulOp>(op);
     Location loc = op->getLoc();
@@ -101,7 +96,7 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
           loc, outputBType, B, rewriter.getI64VectorAttr(broadcastDimensions));
     }
     Value dotProduct;
-    if (paddedRank > 2) {
+    if (paddedRank > 2)
       dotProduct = rewriter.create<mhlo::DotGeneralOp>(loc, outputType,
           broadcastedA, broadcastedB,
           mhlo::DotDimensionNumbersAttr::get(rewriter.getContext(),
@@ -109,7 +104,7 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
               llvm::to_vector<4>(llvm::seq<int64_t>(0, paddedRank - 2)),
               {paddedRank - 1 - oneDPadA}, {paddedRank - 2}),
           nullptr);
-    } else {
+    else {
       dotProduct = rewriter.create<mhlo::DotOp>(
           loc, broadcastedA, broadcastedB, nullptr);
       if (aRank == 1 && bRank == 1)
@@ -120,6 +115,8 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXMatMulOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {

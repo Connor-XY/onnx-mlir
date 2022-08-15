@@ -20,6 +20,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
   ONNXSplitOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXSplitOp::getOperationName(), 1, ctx) {}
@@ -54,8 +56,8 @@ struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
         splitSizes.push_back(splitSize);
       }
     } else if (split.getType().template isa<NoneType>()) {
-			assert(!ShapedType::isDynamic(inputDimSize) &&
-           "input dim size can't be dynamic");
+      assert(!ShapedType::isDynamic(inputDimSize) &&
+             "input dim size can't be dynamic");
       int64_t sliceSize = inputDimSize / outputNum;
       for (unsigned i = 0; i < outputNum; ++i)
         splitSizes.push_back(sliceSize);
@@ -65,13 +67,10 @@ struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
 
     SmallVector<int64_t, 4> sliceShape =
         llvm::to_vector<4>(inputType.getShape());
-    // Parameters for constructing each slice.
     SmallVector<int64_t, 4> beginIndices(rank, 0);
     SmallVector<int64_t, 4> endIndices =
         llvm::to_vector<4>(inputType.getShape());
     SmallVector<int64_t, 4> strides(rank, 1);
-
-    // All HLO slice results used to replace the original tf.Split op.
     SmallVector<Value, 4> slices;
     slices.reserve(outputNum);
     int64_t beginIndice = 0;
@@ -83,7 +82,7 @@ struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
       endIndice += splitSizes[i];
       beginIndices[dimIndex] = beginIndice;
       endIndices[dimIndex] = endIndice;
-      slices.push_back(rewriter.create<mhlo::SliceOp>(loc, sliceType, input, 
+      slices.push_back(rewriter.create<mhlo::SliceOp>(loc, sliceType, input,
           DenseIntElementsAttr::get(
               RankedTensorType::get(
                   {static_cast<int64_t>(beginIndices.size())}, indiceType),
@@ -102,6 +101,8 @@ struct ONNXSplitOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXSplitOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {

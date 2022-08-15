@@ -14,6 +14,7 @@
 
 #include "src/Conversion/ONNXToMhlo/ONNXToMhloCommon.hpp"
 #include "src/Dialect/ONNX/ShapeInference/ONNXShapeHelper.hpp"
+#include "src/Support/TypeUtilities.hpp"
 
 using namespace mlir;
 
@@ -33,13 +34,13 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     Location loc = op->getLoc();
 
     ONNXConvOpShapeHelper shapeHelper(&convOp);
-    auto shapecomputed = shapeHelper.computeShape(operandAdaptor);
+    LogicalResult shapecomputed = shapeHelper.computeShape(operandAdaptor);
     assert(succeeded(shapecomputed) && "Could not compute output shape");
 
-    auto kernelShape = shapeHelper.kernelShape;
-    auto strides = shapeHelper.strides;
-    auto dilations = shapeHelper.dilations;
-    auto outputDims = shapeHelper.dimsForOutput();
+    llvm::SmallVector<IndexExpr, 2>  kernelShape = shapeHelper.kernelShape;
+    llvm::SmallVector<int64_t, 2> strides = shapeHelper.strides;
+    llvm::SmallVector<int64_t, 2> dilations = shapeHelper.dilations;
+    DimsExpr outputDims = shapeHelper.dimsForOutput();
     int outputRank = shapeHelper.dimsForOutput().size();
 
     Value inputOperand = operandAdaptor.X();
@@ -47,14 +48,10 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     Value biasOperand = operandAdaptor.B();
     bool hasBias = !biasOperand.getType().isa<NoneType>();
     int64_t groupNum = convOp.group();
-
-    RankedTensorType inputType =
-        inputOperand.getType().dyn_cast_or_null<RankedTensorType>();
-    if (inputType == nullptr) {
-      return failure();
-    }
-
-    auto inputShape = inputType.getShape();
+    
+    assert(isRankedShapedType(inputOperand.getType()) && "Expected Ranked ShapedType");
+    ShapedType inputType = inputOperand.getType().cast<ShapedType>();
+    llvm::ArrayRef<int64_t> inputShape = inputType.getShape();
     Type outputType = *op->result_type_begin();
     // Onnx Input is NCHW
     int64_t spatialOffset = 2;
@@ -77,8 +74,8 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
     }
 
     // paddings
-    auto pads = shapeHelper.pads;
-    auto padding = convOp.auto_pad();
+    DimsExpr pads = shapeHelper.pads;
+    llvm::StringRef padding = convOp.auto_pad();
     int64_t spatialRank = rank - spatialOffset;
     SmallVector<int64_t> flattenPaddings;
     bool needPadding = (padding == "NOTSET");
@@ -97,11 +94,11 @@ struct ONNXConvOpLoweringToMhlo : public ConversionPattern {
       }
     }
 
-    auto dimension_numbers = mhlo::ConvDimensionNumbersAttr::get(
+    mhlo::ConvDimensionNumbersAttr dimension_numbers = mhlo::ConvDimensionNumbersAttr::get(
         rewriter.getContext(), 0, 1, inputSpatialDimensions, 1, 0,
         kernelDimensions, 0, 1, outputSpatialDimensions);
 
-    auto convResult = rewriter.create<mhlo::ConvolutionOp>(loc, outputType,
+    Value convResult = rewriter.create<mhlo::ConvolutionOp>(loc, outputType,
         inputOperand, filterOperand, rewriter.getI64VectorAttr(strides),
         DenseIntElementsAttr::get(
             RankedTensorType::get({spatialRank, 2}, rewriter.getI64Type()),

@@ -19,6 +19,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXShapeOpLoweringToMhlo : public ConversionPattern {
   ONNXShapeOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXShapeOp::getOperationName(), 1, ctx) {}
@@ -40,24 +42,16 @@ struct ONNXShapeOpLoweringToMhlo : public ConversionPattern {
     Type resultOutputType = RankedTensorType::get(
         shapeHelper.dimsForOutput(0)[0].getLiteral(), elementType);
 
-    // Compute the data selected by the Shape operator.
-    // DimsExpr selectedData = computeSelectedData(operandAdaptor);
-    // llvm::SmallVector<Value, 4> selectedValue;
-    // for (uint64_t i = 0; i < selectedData.size(); ++i) {
-    //   Value val = selectedData[i].getValue();
-    //   selectedValue.push_back(val);
-    // }
-    // Value concat = rewriter.create<mhlo::ConcatenateOp>(
-    //     loc, resultOutputType, selectedValue, rewriter.getI64IntegerAttr({}));
-    // rewriter.replaceOp(op, concat);
     Value input = shapeOp.data();
     Value shape = rewriter.create<shape::ShapeOfOp>(loc, input);
-    Value castedShape = rewriter.create<arith::IndexCastOp>(loc, resultOutputType, shape);
+    Value castedShape =
+        rewriter.create<arith::IndexCastOp>(loc, resultOutputType, shape);
     rewriter.replaceOp(op, castedShape);
-    // llvm::outs() << *op->getParentOp() << "\n";
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXShapeOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {

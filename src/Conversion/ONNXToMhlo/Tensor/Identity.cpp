@@ -18,6 +18,8 @@ using namespace mlir;
 
 namespace onnx_mlir {
 
+namespace {
+
 struct ONNXIdentityOpLoweringToMhlo : public ConversionPattern {
   ONNXIdentityOpLoweringToMhlo(MLIRContext *ctx)
       : ConversionPattern(mlir::ONNXIdentityOp::getOperationName(), 1, ctx) {}
@@ -29,6 +31,8 @@ struct ONNXIdentityOpLoweringToMhlo : public ConversionPattern {
     return success();
   }
 };
+
+} // namespace
 
 void populateLoweringONNXIdentityOpToMhloPattern(
     RewritePatternSet &patterns, MLIRContext *ctx) {
