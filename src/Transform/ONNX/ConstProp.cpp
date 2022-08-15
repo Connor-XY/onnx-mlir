@@ -803,57 +803,57 @@ ONNXConstantOp ConstPropCast(
 // Code to perform constant propagation for SliceOp.
 //===----------------------------------------------------------------------===//
 
-// ONNXConstantOp ConstPropSlice(
-//     PatternRewriter &rewriter, Value replacingValue, Value constValue) {
-//   Operation *op = replacingValue.getDefiningOp();
-//   ONNXSliceOp sliceOp = cast<ONNXSliceOp>(op);
+ONNXConstantOp ConstPropSlice(
+    PatternRewriter &rewriter, Value replacingValue, Value constValue) {
+  Operation *op = replacingValue.getDefiningOp();
+  ONNXSliceOp sliceOp = cast<ONNXSliceOp>(op);
 
-//   ArrayRef<int64_t> inputShape = getShape(constValue.getType());
-//   std::vector<int64_t> inputStrides = getStrides(inputShape);
-//   ArrayRef<int64_t> outputShape = getShape(replacingValue.getType());
-//   std::vector<int64_t> outputStrides = getStrides(outputShape);
+  ArrayRef<int64_t> inputShape = getShape(constValue.getType());
+  std::vector<int64_t> inputStrides = getStrides(inputShape);
+  ArrayRef<int64_t> outputShape = getShape(replacingValue.getType());
+  std::vector<int64_t> outputStrides = getStrides(outputShape);
 
-//   // Get the const value using the maximum precision e.g. double, int64_t.
-//   char *constArray =
-//       getArrayFromAttributeOrBuffer(rewriter, constValue.getDefiningOp());
+  // Get the const value using the maximum precision e.g. double, int64_t.
+  char *constArray =
+      getArrayFromAttributeOrBuffer(rewriter, constValue.getDefiningOp());
 
-//   // Create the result buffer using the maximum precision e.g. double, int64_t.
-//   char *resArray =
-//       allocateBufferFor(replacingValue.getType(), /*useMaxSize=*/true);
+  // Create the result buffer using the maximum precision e.g. double, int64_t.
+  char *resArray =
+      allocateBufferFor(replacingValue.getType(), /*useMaxSize=*/true);
 
-//   // Get starts, ends, axes and steps via ShapeHelper.
-//   ONNXSliceOpShapeHelper shapeHelper(&sliceOp);
-//   ONNXSliceOpAdaptor operandAdaptor(sliceOp);
-//   if (failed(shapeHelper.computeShape(operandAdaptor))) {
-//     sliceOp.emitError("Failed to scan " + ONNXSliceOp::getOperationName() +
-//                       " parameters successfully");
-//     return nullptr;
-//   }
+  // Get starts, ends, axes and steps via ShapeHelper.
+  ONNXSliceOpShapeHelper shapeHelper(&sliceOp);
+  ONNXSliceOpAdaptor operandAdaptor(sliceOp);
+  if (failed(shapeHelper.computeShape(operandAdaptor))) {
+    sliceOp.emitError("Failed to scan " + ONNXSliceOp::getOperationName() +
+                      " parameters successfully");
+    return nullptr;
+  }
 
-//   // Iterate over the output index space.
-//   for (int64_t i = 0; i < ShapedType::getNumElements(outputShape); ++i) {
-//     // Input index: "ii * step + start" for all dim.
-//     // Output index: "ii" for all dims.
-//     // where `ii` is a tensor index.
-//     std::vector<int64_t> outputIndices = getAccessIndex(i, outputStrides);
-//     SmallVector<int64_t, 4> inputIndices;
-//     for (unsigned k = 0; k < outputIndices.size(); ++k) {
-//       int64_t ii = outputIndices[k];
-//       inputIndices.emplace_back(ii * shapeHelper.steps[k].getLiteral() +
-//                                 shapeHelper.starts[k].getLiteral());
-//     }
-//     int64_t inputOffset = getLinearAccessIndex(inputIndices, inputStrides);
-//     int64_t typeSize = 8; // both double and int64_t have size of 8 bytes.
-//     memcpy(
-//         resArray + i * typeSize, constArray + inputOffset * typeSize, typeSize);
-//   }
+  // Iterate over the output index space.
+  for (int64_t i = 0; i < ShapedType::getNumElements(outputShape); ++i) {
+    // Input index: "ii * step + start" for all dim.
+    // Output index: "ii" for all dims.
+    // where `ii` is a tensor index.
+    std::vector<int64_t> outputIndices = getAccessIndex(i, outputStrides);
+    SmallVector<int64_t, 4> inputIndices;
+    for (unsigned k = 0; k < outputIndices.size(); ++k) {
+      int64_t ii = outputIndices[k];
+      inputIndices.emplace_back(ii * shapeHelper.steps[k].getLiteral() +
+                                shapeHelper.starts[k].getLiteral());
+    }
+    int64_t inputOffset = getLinearAccessIndex(inputIndices, inputStrides);
+    int64_t typeSize = 8; // both double and int64_t have size of 8 bytes.
+    memcpy(
+        resArray + i * typeSize, constArray + inputOffset * typeSize, typeSize);
+  }
 
-//   // Construct a new ONNXConstantOp.
-//   ONNXConstantOp res =
-//       createConstantOpAndStoreBufferPtr(rewriter, replacingValue, resArray);
+  // Construct a new ONNXConstantOp.
+  ONNXConstantOp res =
+      createConstantOpAndStoreBufferPtr(rewriter, replacingValue, resArray);
 
-//   return res;
-// }
+  return res;
+}
 
 //===----------------------------------------------------------------------===//
 // Code to perform constant propagation for ConcatOp.
