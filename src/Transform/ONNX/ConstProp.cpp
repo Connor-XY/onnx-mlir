@@ -30,11 +30,8 @@
 #include "src/Support/Common.hpp"
 #include "src/Support/TypeUtilities.hpp"
 #include "src/Transform/ONNX/ConstPropHelper.hpp"
-#include "llvm/Support/Debug.h"
 
 #include <math.h>
-
-#define DEBUG_TYPE "constprop"
 
 using namespace mlir;
 using namespace onnx_mlir;
