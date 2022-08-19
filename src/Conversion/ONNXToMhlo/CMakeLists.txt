@@ -22,6 +22,7 @@ add_onnx_mlir_library(OMONNXToMhlo
   Tensor/ArgMax.cpp
   Tensor/Concat.cpp
   Tensor/Constant.cpp
+  Tensor/Expand.cpp
   Tensor/Flatten.cpp
   Tensor/Gather.cpp
   Tensor/Identity.cpp
@@ -30,6 +31,7 @@ add_onnx_mlir_library(OMONNXToMhlo
   Tensor/Slice.cpp
   Tensor/Split.cpp
   Tensor/Squeeze.cpp
+  Tensor/Tile.cpp
   Tensor/Transpose.cpp
   Tensor/Unsqueeze.cpp
 

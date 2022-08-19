@@ -103,6 +103,13 @@ Value getShapedInt(Location loc, ConversionPatternRewriter &rewriter,
   return broadcastedValue;
 }
 
+llvm::SmallVector<Value, 4> getBroadcastedOperands(Operation *op,
+    ConversionPatternRewriter &rewriter, Location loc, int64_t outputRank);
+
+llvm::SmallVector<Value, 4> getBroadcastedOperands(
+    llvm::SmallVector<Value, 4> &operands, Type outputType,
+    ConversionPatternRewriter &rewriter, Location loc, int64_t outputRank);
+
 // `Math` directory methods:
 void populateLoweringONNXElementwiseOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
@@ -126,6 +133,8 @@ void populateLoweringONNXConcatOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXConstantOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXExpandOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXFlattenOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXGatherOpToMhloPattern(
@@ -141,6 +150,8 @@ void populateLoweringONNXSliceOpToMhloPattern(
 void populateLoweringONNXSplitOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXSqueezeOpToMhloPattern(
+    RewritePatternSet &, MLIRContext *);
+void populateLoweringONNXTileOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);
 void populateLoweringONNXTransposeOpToMhloPattern(
     RewritePatternSet &, MLIRContext *);

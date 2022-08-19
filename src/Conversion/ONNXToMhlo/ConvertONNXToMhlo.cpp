@@ -34,6 +34,7 @@ void populateONNXToMhloConversionPattern(
   populateLoweringONNXArgMaxOpToMhloPattern(patterns, ctx);
   populateLoweringONNXConcatOpToMhloPattern(patterns, ctx);
   populateLoweringONNXConstantOpToMhloPattern(patterns, ctx);
+  populateLoweringONNXExpandOpToMhloPattern(patterns, ctx);
   populateLoweringONNXFlattenOpToMhloPattern(patterns, ctx);
   populateLoweringONNXGatherOpToMhloPattern(patterns, ctx);
   populateLoweringONNXIdentityOpToMhloPattern(patterns, ctx);
@@ -42,6 +43,7 @@ void populateONNXToMhloConversionPattern(
   populateLoweringONNXSliceOpToMhloPattern(patterns, ctx);
   populateLoweringONNXSplitOpToMhloPattern(patterns, ctx);
   populateLoweringONNXSqueezeOpToMhloPattern(patterns, ctx);
+  populateLoweringONNXTileOpToMhloPattern(patterns, ctx);
   populateLoweringONNXTransposeOpToMhloPattern(patterns, ctx);
   populateLoweringONNXUnsqueezeOpToMhloPattern(patterns, ctx);
 }
