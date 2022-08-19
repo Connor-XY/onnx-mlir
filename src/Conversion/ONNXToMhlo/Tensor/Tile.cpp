@@ -47,19 +47,27 @@ struct ONNXTileOpLoweringToMhlo : public ConversionPattern {
     Type elementType = inputType.getElementType();
     int64_t inputRank = inputType.getRank();
     SmallVector<Value, 4> inputShapeValues;
+    Type indexType = rewriter.getI64Type();
+
     for (int64_t i = 0; i < inputRank; ++i) {
       int64_t dim_size = inputType.getDimSize(i);
       if (dim_size == ShapedType::kDynamicSize) {
         Value inputShape = rewriter.create<shape::ShapeOfOp>(loc, input);
-        inputShapeValues.push_back(
-            rewriter.create<shape::GetExtentOp>(loc, inputShape, i));
+        Value dimSizeExtent =
+            rewriter.create<shape::GetExtentOp>(loc, inputShape, i);
+        Value dimSizeValue = rewriter.create<arith::IndexCastOp>(
+            loc, RankedTensorType::get({1}, indexType), dimSizeExtent);
+        inputShapeValues.push_back(dimSizeValue);
       } else {
         inputShapeValues.push_back(rewriter.create<mhlo::ConstantOp>(
-            loc, rewriter.getIndexAttr(dim_size)));
+            loc, DenseIntElementsAttr::get(
+                     RankedTensorType::get({1}, indexType),
+                     ArrayRef<int64_t>{dim_size})));
       }
     }
 
-    RankedTensorType multiplesType = multiples.getType().dyn_cast<RankedTensorType>();
+    RankedTensorType multiplesType =
+        multiples.getType().dyn_cast<RankedTensorType>();
     Type multiplesElementType = multiplesType.getElementType();
     int64_t multiplesRank = multiplesType.getRank();
     if (multiplesRank != 1)
@@ -68,7 +76,7 @@ struct ONNXTileOpLoweringToMhlo : public ConversionPattern {
         (multiplesType.getDimSize(0) != inputRank)) {
       return failure();
     }
-    Type indexType = rewriter.getIndexType();
+    
     SmallVector<Value, 4> outDimSize;
     outDimSize.reserve(inputRank * 2);
     for (int64_t dim_idx = 0; dim_idx < inputRank; ++dim_idx) {
@@ -83,9 +91,9 @@ struct ONNXTileOpLoweringToMhlo : public ConversionPattern {
           DenseIntElementsAttr::get(
               RankedTensorType::get({1}, multiplesElementType),
               ArrayRef<int64_t>{1}));
-      Value multiples_size_casted =
-          rewriter.create<arith::IndexCastOp>(loc, RankedTensorType::get({1},indexType), multiples_size);
-      outDimSize.push_back(multiples_size_casted);
+      // Value multiples_size_casted = rewriter.create<arith::IndexCastOp>(
+      //     loc, RankedTensorType::get({1}, indexType), multiples_size);
+      outDimSize.push_back(multiples_size);
       outDimSize.push_back(inputShapeValues[dim_idx]);
     }
     SmallVector<int64_t, 4> broadcastDimensions;
@@ -96,9 +104,9 @@ struct ONNXTileOpLoweringToMhlo : public ConversionPattern {
     auto broadcast_dims_attr = rewriter.getI64VectorAttr(broadcastDimensions);
 
     Value out_dim_size_tensor = rewriter.create<mhlo::ConcatenateOp>(loc,
-      RankedTensorType::get(
-          {static_cast<int64_t>(outDimSize.size())}, indexType),
-      outDimSize, IntegerAttr::get(rewriter.getIntegerType(64), 0));
+        RankedTensorType::get(
+            {static_cast<int64_t>(outDimSize.size())}, indexType),
+        outDimSize, IntegerAttr::get(rewriter.getIntegerType(64), 0));
     SmallVector<int64_t, 4> broadcast_shape(
         inputRank * 2, ShapedType::kDynamicSize);
     RankedTensorType broadcast_type =
@@ -110,13 +118,15 @@ struct ONNXTileOpLoweringToMhlo : public ConversionPattern {
     SmallVector<Value, 4> shape_values;
     shape_values.reserve(inputRank);
     for (int64_t i = 0; i < inputRank; ++i) {
-      Value dim_size_value = rewriter.create<shape::MulOp>(
+      Value dim_size_value = rewriter.create<mhlo::MulOp>(
           loc, outDimSize[2 * i], outDimSize[2 * i + 1]);
       shape_values.push_back(dim_size_value);
     }
-    Value shape = rewriter.create<shape::FromExtentsOp>(
-        loc, RankedTensorType::get({inputRank}, indexType), shape_values);
-    Value reshpaeOp = rewriter.create<mhlo::DynamicReshapeOp>(loc, outputType, broadcast, shape);
+    Value shape = rewriter.create<mhlo::ConcatenateOp>(loc, RankedTensorType::get(
+        {static_cast<int64_t>(shape_values.size())}, indexType), shape_values,
+        IntegerAttr::get(rewriter.getIntegerType(64), 0));
+    Value reshpaeOp = rewriter.create<mhlo::DynamicReshapeOp>(
+        loc, outputType, broadcast, shape);
     rewriter.replaceOp(op, reshpaeOp);
     return success();
   }
