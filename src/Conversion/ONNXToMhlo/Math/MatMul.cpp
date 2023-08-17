@@ -66,20 +66,63 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
 
     llvm::SmallVector<int64_t, 4> aShape;
     llvm::SmallVector<int64_t, 4> bShape;
-
+    Value AShape = rewriter.create<shape::ShapeOfOp>(loc, A);
+    Value BShape = rewriter.create<shape::ShapeOfOp>(loc, B);
+    SmallVector<Value> AShapeDims;
+    SmallVector<Value> BShapeDims;
+    int aOffset = paddedRank - aRank;
+    int bOffset = paddedRank - bRank;
+    if (bRank == 1)
+      bOffset--;
     for (int64_t i = 0; i < paddedRank - 2; i++) {
-      aShape.push_back(getLiteralValue(outputDims[i]));
-      bShape.push_back(getLiteralValue(outputDims[i]));
+      aShape.push_back(outputShapeList[i]);
+      bShape.push_back(outputShapeList[i]);
+      if (outputShapeList[i] != ShapedType::kDynamic) { // use output dim
+        AShapeDims.push_back(
+            rewriter.create<arith::ConstantIndexOp>(loc, outputShapeList[i]));
+        BShapeDims.push_back(
+            rewriter.create<arith::ConstantIndexOp>(loc, outputShapeList[i]));
+      } else if (aDims[i].isLiteralAndIdenticalTo(1)) { // use B dim
+        AShapeDims.push_back(
+            rewriter.create<shape::GetExtentOp>(loc, BShape, i));
+        BShapeDims.push_back(
+            rewriter.create<shape::GetExtentOp>(loc, BShape, i));
+      } else { // use A dim
+        AShapeDims.push_back(
+            rewriter.create<shape::GetExtentOp>(loc, AShape, i));
+        BShapeDims.push_back(
+            rewriter.create<shape::GetExtentOp>(loc, AShape, i));
+      }
     }
-    if (!aPadDims[paddedRank - 2])
+    if (!aPadDims[paddedRank - 2]) {
       aShape.push_back(aShapeList[paddedRank - 2]);
+      AShapeDims.push_back(rewriter.create<shape::GetExtentOp>(
+          loc, AShape, paddedRank - 2 - aOffset));
+    }
     aShape.push_back(aShapeList[paddedRank - 1]);
     bShape.push_back(bShapeList[paddedRank - 2]);
-    if (!bPadDims[paddedRank - 1])
+    AShapeDims.push_back(rewriter.create<shape::GetExtentOp>(
+        loc, AShape, paddedRank - 1 - aOffset));
+    BShapeDims.push_back(rewriter.create<shape::GetExtentOp>(
+        loc, BShape, paddedRank - 2 - bOffset));
+    if (!bPadDims[paddedRank - 1]) {
       bShape.push_back(bShapeList[paddedRank - 1]);
+      BShapeDims.push_back(rewriter.create<shape::GetExtentOp>(
+          loc, BShape, paddedRank - 1 - bOffset));
+    }
 
     Type outputAType = RankedTensorType::get(aShape, elementType);
     Type outputBType = RankedTensorType::get(bShape, elementType);
+    Type outputAShapeType =
+        RankedTensorType::get({aShape.size()}, rewriter.getIndexType());
+    Type outputBShapeType =
+        RankedTensorType::get({bShape.size()}, rewriter.getIndexType());
+    Value outputAShape = rewriter.create<shape::FromExtentsOp>(loc, AShapeDims);
+    outputAShape = rewriter.create<shape::ToExtentTensorOp>(
+        loc, outputAShapeType, outputAShape);
+    Value outputBShape = rewriter.create<shape::FromExtentsOp>(loc, BShapeDims);
+    outputBShape = rewriter.create<shape::ToExtentTensorOp>(
+        loc, outputBShapeType, outputBShape);
 
     int64_t oneDPadA = aPadDims[paddedRank - 2];
     int64_t oneDPadB = bPadDims[paddedRank - 1];
@@ -89,16 +132,18 @@ struct ONNXMatMulOpLoweringToMhlo : public ConversionPattern {
       SmallVector<int64_t, 4> broadcastDimensions =
           llvm::to_vector<4>(llvm::seq<int64_t>(
               paddedRank - oneDPadA - aRank, paddedRank - oneDPadA));
-      broadcastedA = rewriter.createOrFold<mhlo::BroadcastInDimOp>(
-          loc, outputAType, A, rewriter.getI64VectorAttr(broadcastDimensions));
+      broadcastedA =
+          rewriter.createOrFold<mhlo::DynamicBroadcastInDimOp>(loc, outputAType,
+              A, outputAShape, rewriter.getI64VectorAttr(broadcastDimensions));
     }
     Value broadcastedB;
     {
       SmallVector<int64_t, 4> broadcastDimensions =
           llvm::to_vector<4>(llvm::seq<int64_t>(
               paddedRank - oneDPadB - bRank, paddedRank - oneDPadB));
-      broadcastedB = rewriter.createOrFold<mhlo::BroadcastInDimOp>(
-          loc, outputBType, B, rewriter.getI64VectorAttr(broadcastDimensions));
+      broadcastedB =
+          rewriter.createOrFold<mhlo::DynamicBroadcastInDimOp>(loc, outputBType,
+              B, outputBShape, rewriter.getI64VectorAttr(broadcastDimensions));
     }
     Value dotProduct;
     if (paddedRank > 2)
