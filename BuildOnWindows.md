@@ -4,8 +4,8 @@
 
 Building onnx-mlir on Windows requires building some additional prerequisites that are not available by default.
 
-Note that the instructions in this file assume you are using [Visual Studio  2019 Community Edition](https://visualstudio.microsoft.com/downloads/) with ninja. 
-It is recommended that you have the **Desktop development with C++** and **Linux development with C++** workloads installed. 
+Note that the instructions in this file assume you are using [Visual Studio  2019 Community Edition](https://visualstudio.microsoft.com/downloads/) with ninja.
+It is recommended that you have the **Desktop development with C++** and **Linux development with C++** workloads installed.
 This ensures you have all toolchains and libraries needed to compile this project and its dependencies on Windows.
 
 Run all the commands from a shell started from **"Developer Command Prompt for VS 2019"**.
@@ -15,10 +15,9 @@ Build protobuf as a static library.
 
 [same-as-file]: <> (utils/install-protobuf.cmd)
 ```shell
-git clone --recurse-submodules https://github.com/protocolbuffers/protobuf.git
-REM Check out a specific branch that is known to work with ONNX-MLIR.
-REM This corresponds to the v3.16.0 tag which is the recommended version of onnx 1.11.0
-cd protobuf && git checkout 2dc747c574b68a808ea4699d26942c8132fe2b09 && cd ..
+REM Check out protobuf v3.20.3
+set protobuf_version=3.20.3
+git clone -b v%protobuf_version% --recursive https://github.com/protocolbuffers/protobuf.git
 
 set root_dir=%cd%
 md protobuf_build
@@ -41,9 +40,9 @@ Before running CMake for onnx-mlir, ensure that the bin directory to this protob
 set PATH=%root_dir%\protobuf_install\bin;%PATH%
 ```
 
-If you wish to be able to run all the ONNX-MLIR tests, you will also need to install the matchin version of protobuf through pip:
+If you wish to be able to run all the ONNX-MLIR tests, you will also need to install the matching version of protobuf through pip. Note that this is included in the requirements.txt file at the root of onnx-mlir, so if you plan on using it, you won't need to explicitly install protobuf.
 ```shell
-python3 -m pip install protobuf==3.16
+python3 -m pip install protobuf==3.20.3
 ```
 
 #### MLIR
@@ -53,7 +52,7 @@ Install MLIR (as a part of LLVM-Project):
 ```shell
 git clone -n https://github.com/llvm/llvm-project.git
 # Check out a specific branch that is known to work with ONNX-MLIR.
-cd llvm-project && git checkout 9778ec057cf4214241e4a970f3e764e3cf150181 && cd ..
+cd llvm-project && git checkout d13da154a7c7eff77df8686b2de1cfdfa7cc7029 && cd ..
 ```
 
 [same-as-file]: <> (utils/build-mlir.cmd)
@@ -69,7 +68,8 @@ call cmake %root_dir%\llvm-project\llvm -G "Ninja" ^
    -DLLVM_ENABLE_ASSERTIONS=ON ^
    -DLLVM_ENABLE_RTTI=ON ^
    -DLLVM_ENABLE_ZLIB=OFF ^
-   -DLLVM_INSTALL_UTILS=ON
+   -DLLVM_INSTALL_UTILS=ON ^
+   -DLLVM_ENABLE_LIBEDIT=OFF
 
 call cmake --build . --config Release
 call cmake --build . --config Release --target install
@@ -100,9 +100,9 @@ call cmake %root_dir%\onnx-mlir -G "Ninja" ^
    -DLLVM_EXTERNAL_LIT=%lit_path% ^
    -DLLVM_LIT_ARGS=-v ^
    -DMLIR_DIR=%root_dir%\llvm-project\build\lib\cmake\mlir ^
-   -DONNX_MLIR_BUILD_TESTS=OFF
+   -DONNX_MLIR_ENABLE_WERROR=ON
 
-call cmake --build . --config Release --target onnx-mlir
+call cmake --build . --config Release
 ```
 After the above commands succeed, an `onnx-mlir` executable should appear in the `Debug/bin` or `Release/bin` directory.
 

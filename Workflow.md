@@ -179,7 +179,7 @@ Specific testing help is provided in these pages to [run](TestingHighLevel.md) a
 ## Step 7: Commit & Push
 
 ONNX-MLIR requires committers to sign their code using the [Developer Certificate of Origin (DCO)](https://developercertificate.org).
-THere is a one time setup to register your name and email.
+There is a one time setup to register your name and email.
 The commands are listed below, where you substitute your name and email address in the "John Doe" fields.
 
 ```sh
@@ -187,7 +187,8 @@ git config --global user.name "John Doe"
 git config --global user.email johndoe@example.com
 ```
 
-You may also be asked to sign a Contributor License Agreement (CLA) at some times during the PR review.
+You may also be asked to sign a Developer Certificate of Origin (DCO)
+at some times during the PR review.
 If you do, you will have to accept in order to contribute code.
 
 Once these initial tasks are done, you are ready to sign your code by using the `-s` flag during your commits.
@@ -294,3 +295,5 @@ Using the GitHub interface:
 Very small PRs are easy to review. Very large PRs are very difficult to review.
 
 Follow the [coding style](https://llvm.org/docs/CodingStandards.html) used by LLVM for your code. We use the `clang-format` command to get the proper style, which is also tested by our CIs. It is acceptable to run the command on all of the files that were modified by your PR. We recommend using VS code where the clang formatter will be run automatically using the clang format configuration file already present in the repository.
+
+For python code, we use the [black](https://pypi.org/project/black) code formatter. You should run the `black` command on all the python code modified by your PR, which must pass the black code formatter CI check before it can be merged.

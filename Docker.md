@@ -14,7 +14,10 @@ These images are created as a result of a successful merge build on the trunk.
 This means that the latest image represents the tip of the trunk.
 Currently there are both Release and Debug mode images for `amd64`, `ppc64le` and `s390x` saved in Docker Hub as, respectively, [onnxmlirczar/onnx-mlir](https://hub.docker.com/r/onnxmlirczar/onnx-mlir) and [onnxmlirczar/onnx-mlir-dev](https://hub.docker.com/r/onnxmlirczar/onnx-mlir-dev).
 To use one of these images either pull it directly from Docker Hub, launch a container and run an interactive bash shell in it, or use it as the base image in a Dockerfile.
-The onnx-mlir image just contains the built compiler and you can use it immediately to compile your model without any installation. 
+
+Here are the differences between the two Docker images.
+* The `onnx-mlir` image just contains the built compiler and you can use it immediately to compile your model without any installation. It does not include any support to run compiled model.
+* The `onnx-mlir-dev` image contains the built compiler plus all of the tools and support needed for development, including support to run our tests locally. The image also support tools to run compiled models, such as support for our python interface.
 
 ## Easy Script to Compile a Model
 
@@ -57,7 +60,7 @@ ENV HOME=/workdir
 # 1) Install packages.
 ENV PATH=$PATH:/workdir/bin
 RUN apt-get update
-RUN apt-get install -y python-numpy
+RUN apt-get install -y python3-numpy
 RUN apt-get install -y python3-pip
 RUN python -m pip install --upgrade pip
 RUN apt-get install -y gdb
@@ -71,13 +74,13 @@ RUN apt-get install -y libeigen3-dev
 RUN apt-get install -y clang-format
 RUN python -m pip install wheel
 RUN python -m pip install numpy
-RUN python -m pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+RUN python -m pip install torch==2.0.0+cpu torchvision==0.15.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
 RUN git clone https://github.com/onnx/tutorials.git
 # Install clang
 RUN apt-get install -y lsb-release wget software-properties-common
 RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 # For development
-RUN apt-get install ssh-client
+RUN apt-get install -y ssh-client
 
 # 3) When using vscode, copy your .vscode in the Dockerfile dir and
 #    uncomment the two lines below.
@@ -91,11 +94,8 @@ RUN apt-get install ssh-client
 
 # 5) Fix git by reattaching head and making git see other branches than main.
 WORKDIR /workdir/onnx-mlir
-RUN git remote rename origin upstream
-RUN git checkout main
-RUN git fetch --unshallow
 # Add optional personal fork and disable pushing to upstream (best practice).
-# RUN git remote add origin https://github.com/<user>/onnx-mlir.git
+# RUN git remote add origin https://github.com/<<user>>/onnx-mlir.git
 # RUN git remote set-url --push upstream no_push
 
 # 6) Set the PATH environment vars for make/debug mode. Replace Debug
@@ -119,11 +119,32 @@ These steps are summarized here.
 # Starting in the onnx-mlir directory, copy the Docker example directory.
 cp -prf docs/docker-example ~/DockerOnnxMlir
 cd ~/DockerOnnxMlir
-# Edit the Docker file.
+# Edit the Dockerfile.
 vi Dockerfile
 # Build the Docker image.
 docker build --tag onnx-mlir-dev .
 # Start a container using the Docker dashboard or a docker run command.
+docker run -it onnx-mlir-dev
+```
+
+**NOTE:** If you are using a MacBook with the Apple M1 chip, please follow the steps below for configuration:
+``` shell
+# Starting in the onnx-mlir directory, copy the Docker example directory.
+cp -prf docs/docker-example ~/DockerOnnxMlir
+cd ~/DockerOnnxMlir
+# Edit the Dockerfile.
+vi Dockerfile
+# Pull the Docker image with the specified platform
+docker pull --platform linux/amd64 onnxmlirczar/onnx-mlir-dev
+# Build the Docker image.
+docker build --platform linux/amd64 --tag onnx-mlir-dev .
+# Start a container using the Docker dashboard or a docker run command.
+docker run --platform linux/amd64 -it onnx-mlir-dev
+```
+
+Tip: Instead of adding the platform flag for every docker pull, build, and run command. You can set the environment variable `DOCKER_DEFAULT_PLATFORM` and use the first set of steps:
+```
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
 ```
 
 ### Developing with Docker in VSCode
@@ -153,3 +174,16 @@ git push --set-upstream origin main
 
 A Docker container can be used to investigate a bug, or to develop a new feature. Some like to create a new images for each new version of ONNX-MLIR; others prefer to create one image and use git to update the main branch and use git to switch between multiple branches. Both are valid approaches.
 
+## Using a devcontainer
+Another way of building onnx-mlir for development in VSCode is using a devcontainer. This way you only mount your source folder, meaning that changes you do are saved on your local machine. For this setup to work you need a `Dockerfile` and a `devcontainer.json` file. Both are provided in `docs/devcontainer-example`. 
+
+The [`Dockerfile`](devcontainer-example/Dockerfile.llvm-project) is a simple Dockerfile based on the precompiled LLVM/MLIR image that is shared. It installs additional software that is useful for developing and also sets `LLVM_PROJECT_ROOT` to easily refer to the LLVM path.
+
+
+The [`devcontainer.json`](devcontainer-example/devcontainer.json) preinstalls extensions and defines settings for the VS Code server running inside the container. This way you don't have to setup VS Code everytime you enter the container. In `postAttachCommand` ONNX is installed.
+
+To use this setup you first clone onnx-mlir and all submodules (for example with` git clone --recursive https://github.com/onnx/onnx-mlir.git`). You then create a new folder named `.devcontainer` in the source root. After that you copy the two files in `docs/devcontainer-example` into that folder. Now simply press `CTRL+SHIFT+P` and execute `Dev Containers: Reopen in Container`. VSCode will now create the docker image and mount the source folder.
+
+You can now configure onnx-mlir as described in [BuildOnLinuxOSX](BuildOnLinuxOSX.md). `MLIR_DIR` is already set for you, so you can skip that step.
+
+**Note:** To run this on M1/2 Macs something like Rosetta is needed. This is related to https://github.com/docker/roadmap/issues/384
