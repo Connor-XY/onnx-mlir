@@ -189,7 +189,7 @@ Interfaces: MemoryEffectOpInterface
 
 | Operand | Description |
 | :-----: | ----------- |
-| `parameters` | any type
+| `parameters` | variadic of any type
 
 ### `krnl.copy_from_tile_buffer` (KrnlCopyFromBufferOp)
 
@@ -227,7 +227,7 @@ Traits: MemRefsNormalizable
 | :-----: | ----------- |
 | `buffer` | memref of any type values
 | `dest` | memref of any type values
-| `starts` | index
+| `starts` | variadic of index
 
 ### `krnl.copy_to_tile_buffer` (KrnlCopyToBufferOp)
 
@@ -296,7 +296,7 @@ Traits: MemRefsNormalizable
 | :-----: | ----------- |
 | `buffer` | memref of any type values
 | `source` | memref of any type values
-| `starts` | index
+| `starts` | variadic of index
 | `padValue` | any type
 
 ### `krnl.define_loops` (KrnlDefineLoopsOp)
@@ -311,38 +311,7 @@ intend to optimize.
 
 | Result | Description |
 | :----: | ----------- |
-&laquo;unnamed&raquo; | any type
-
-### `krnl.dim` (KrnlDimOp)
-
-_Krnl dimensions operation._
-
-Emits the dimension of a MemRef independent of the MemRef alloc:
-
-```
-"krnl.dim"(%memref, %index)
-```
-
-The index identifies the dimension within the shape which is going to be emitted.
-Initially the krnl.dim operation depends on the alloc of the MemRef.
-Unlike the std.dim operation which maintains a dependency on the alloc of the MemRef, the dimension emitted by krnl.dim will not depend on the alloc operation of the MemRef once the krnl.dim operation is lowered.
-
-Any changes to the original MemRef size after the krnl.dim has been lowered will not be picked up by the emitted dimension. This allows the original MemRef to be safely modified via code transformations or affine map normalization without the risk of changing the value already emitted via krnl.dim.
-
-Traits: MemRefsNormalizable
-
-#### Operands:
-
-| Operand | Description |
-| :-----: | ----------- |
-| `alloc` | memref of any type values
-| `index` | index
-
-#### Results:
-
-| Result | Description |
-| :----: | ----------- |
-| `dimension` | index
+&laquo;unnamed&raquo; | variadic of any type
 
 ### `krnl.entry_point` (KrnlEntryPointOp)
 
@@ -400,7 +369,7 @@ Effects: MemoryEffects::Effect{}
 
 ### `krnl.get_induction_var_value` (KrnlGetInductionVariableValueOp)
 
-_Krnl _
+_Krnl_
 
 
 Syntax:
@@ -421,41 +390,13 @@ current tile being iterated over.
 
 | Operand | Description |
 | :-----: | ----------- |
-| `loops` | any type
+| `loops` | variadic of any type
 
 #### Results:
 
 | Result | Description |
 | :----: | ----------- |
-| `ind_var_vals` | any type
-
-### `krnl.getref` (KrnlGetRefOp)
-
-_Krnl a MemRef from within another MemRef starting at a specific offset._
-
-    Retrieves a MemRef from within another MemRef:
-
-```
-    "krnl.getref"(%memref, %offset)
-```
-    The offset is an integer which is used as an index into the input MemRef. It works
-    just like an array index.
-
-Traits: MemRefsNormalizable
-
-#### Operands:
-
-| Operand | Description |
-| :-----: | ----------- |
-| `mempool` | memref of any type values
-| `offset` | integer
-| `value` | index
-
-#### Results:
-
-| Result | Description |
-| :----: | ----------- |
-| `output` | memref of any type values
+| `ind_var_vals` | variadic of any type
 
 ### `krnl.global` (KrnlGlobalOp)
 
@@ -577,7 +518,7 @@ Interfaces: LoopLikeOpInterface
 
 | Operand | Description |
 | :-----: | ----------- |
-&laquo;unnamed&raquo; | any type
+&laquo;unnamed&raquo; | variadic of any type
 
 ### `krnl.load` (KrnlLoadOp)
 
@@ -603,7 +544,7 @@ Traits: MemRefsNormalizable
 | Operand | Description |
 | :-----: | ----------- |
 | `memref` | memref of any type values
-| `indices` | index
+| `indices` | variadic of index
 
 #### Results:
 
@@ -811,12 +752,12 @@ Interfaces: SpecializedKernelOpInterface
 | Operand | Description |
 | :-----: | ----------- |
 | `A` | memref of any type values
-| `aGlobalIndexMemStart` | index
+| `aGlobalIndexMemStart` | variadic of index
 | `B` | memref of any type values
-| `bGlobalIndexMemStart` | index
+| `bGlobalIndexMemStart` | variadic of index
 | `C` | memref of any type values
-| `cGlobalIndexMemStart` | index
-| `loops` | any type
+| `cGlobalIndexMemStart` | variadic of index
+| `loops` | variadic of any type
 | `iGlobalIndexComputeStart` | index
 | `jGlobalIndexComputeStart` | index
 | `kGlobalIndexComputeStart` | index
@@ -917,6 +858,28 @@ are nested imperfectly between an "eager" and a "lazy" loop.
 
 Traits: SingleBlock, SingleBlockImplicitTerminator<KrnlTerminatorOp>
 
+### `krnl.noValue` (KrnlNoneOp)
+
+_An operation representing the absence of a value._
+
+This operation can be used to represent the absence of a value. It is
+typically used as an argument to operators that have optional parameters,
+and converted into nullptr while krnl to llvm lowering.
+Typically it is used for optional arguments used in KrnlCallop.
+
+#### Attributes:
+
+<table>
+<tr><th>Attribute</th><th>MLIR Type</th><th>Description</th></tr>
+<tr><td><code>value</code></td><td>::mlir::UnitAttr</td><td>unit attribute</td></tr>
+</table>
+
+#### Results:
+
+| Result | Description |
+| :----: | ----------- |
+| `none_val` | none type
+
 ### `krnl.parallel` (KrnlParallelOp)
 
 _Mark Krnl loops as parallel loops_
@@ -941,7 +904,7 @@ krnl.parallel (%i0, %i1) : !Krnl.loop, !Krnl.loop
 
 | Operand | Description |
 | :-----: | ----------- |
-| `loops` | any type
+| `loops` | variadic of any type
 
 ### `krnl.permute` (KrnlPermuteOp)
 
@@ -1020,7 +983,7 @@ affine.for %arg0 = 0 to 1024 step 4 {
 
 | Operand | Description |
 | :-----: | ----------- |
-| `loops` | any type
+| `loops` | variadic of any type
 
 ### `krnl.print` (KrnlPrintOp)
 
@@ -1126,7 +1089,7 @@ Interfaces: AllocationOpInterface, MemoryEffectOpInterface
 
 | Operand | Description |
 | :-----: | ----------- |
-| `length` | index
+| `length` | variadic of index
 
 #### Results:
 
@@ -1212,30 +1175,6 @@ Traits: MemRefsNormalizable
 | `seq` | memref of any type values
 | `index` | index
 
-### `krnl.shape` (KrnlShapeOp)
-
-_Krnl operation to retrieve the shape of a MemRef._
-
-Extracts the shape of a MemRef:
-```
-  "krnl.shape"(%memref)
-```
-The return result is of `shape.type`.
-
-Traits: MemRefsNormalizable
-
-#### Operands:
-
-| Operand | Description |
-| :-----: | ----------- |
-| `alloc` | memref of any type values
-
-#### Results:
-
-| Result | Description |
-| :----: | ----------- |
-| `shape` | memref of any type values
-
 ### `krnl.specialized_kernel` (KrnlSpecializedKernel)
 
 _Krnl specialized kernel op_
@@ -1255,7 +1194,7 @@ Interfaces: SpecializedKernelOpInterface
 
 | Operand | Description |
 | :-----: | ----------- |
-| `loops` | any type
+| `loops` | variadic of any type
 
 ### `krnl.store` (KrnlStoreOp)
 
@@ -1281,7 +1220,7 @@ Traits: MemRefsNormalizable
 | :-----: | ----------- |
 | `value` | any type
 | `memref` | memref of any type values
-| `indices` | index
+| `indices` | variadic of index
 
 ### `krnl.strlen` (KrnlStrlenOp)
 
